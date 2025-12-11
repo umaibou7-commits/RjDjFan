@@ -9,9 +9,7 @@
       --accent-color: #facc15;
       --accent-soft: rgba(250, 204, 21, 0.28);
     }
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
     body {
       font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
       margin: 0;
@@ -24,10 +22,7 @@
       margin: 0 auto;
       padding: 24px 16px 40px;
     }
-    h1 {
-      font-size: 1.7rem;
-      margin-bottom: 6px;
-    }
+    h1 { font-size: 1.7rem; margin-bottom: 6px; }
     .subtitle {
       font-size: 0.9rem;
       color: #9ca3af;
@@ -51,10 +46,8 @@
       opacity: 0.7;
       pointer-events: none;
     }
-    .card-inner {
-      position: relative;
-      z-index: 1;
-    }
+    .card-inner { position: relative; z-index: 1; }
+
     .controls {
       display: flex;
       flex-wrap: wrap;
@@ -77,15 +70,15 @@
       opacity: 0.4;
       cursor: default;
     }
-    button:hover:not([disabled]) {
-      border-color: var(--accent-color);
-    }
+    button:hover:not([disabled]) { border-color: var(--accent-color); }
+
     label {
       font-size: 0.85rem;
       display: flex;
       align-items: center;
       gap: 4px;
     }
+
     #status {
       font-size: 0.85rem;
       color: #e5e7eb;
@@ -99,6 +92,7 @@
       margin-top: 6px;
       line-height: 1.5;
     }
+
     .range-group {
       display: flex;
       flex-wrap: wrap;
@@ -112,13 +106,13 @@
       flex-direction: column;
       gap: 2px;
     }
-    .range-group input[type="range"] {
-      width: 100%;
-    }
+    .range-group input[type="range"] { width: 100%; }
+
     #randomizeBtn {
       font-size: 0.8rem;
       padding-inline: 10px;
     }
+
     .mode-meta {
       display: flex;
       align-items: center;
@@ -140,19 +134,10 @@
       background: rgba(15,23,42,0.97);
       box-shadow: 0 0 0 1px var(--accent-soft);
     }
-    .mode-text {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-    .mode-name {
-      font-size: 0.9rem;
-      font-weight: 600;
-    }
-    .mode-seed {
-      font-size: 0.75rem;
-      color: #9ca3af;
-    }
+    .mode-text { display: flex; flex-direction: column; gap: 2px; }
+    .mode-name { font-size: 0.9rem; font-weight: 600; }
+    .mode-seed { font-size: 0.75rem; color: #9ca3af; }
+
     .pad {
       position: relative;
       margin-top: 10px;
@@ -202,8 +187,8 @@
   <main class="app">
     <h1>Mic Lo-fi Chord Memory</h1>
     <p class="subtitle">
-      マイクで拾った音だけで、Lo-fi系セブンスコード進行とリズム的な反芻をリアルタイム生成。<br />
-      声や環境音が「コードの一部」になって重なっていくRjDjライクな体験用シーンです。
+      マイクで拾った音だけを素材にして、Lo-fi系セブンスコード進行とループ反芻をリアルタイム生成。<br />
+      声や環境音が「コードの一部」になって幾重にも重なっていく RjDj ライクな体験用シーンです。
     </p>
 
     <section class="card">
@@ -239,7 +224,7 @@
         <div id="pad" class="pad">
           <div id="padCursor" class="pad-cursor" style="left:50%; top:50%;"></div>
           <div class="pad-label">
-            タッチパッド：X＝キー切替 / Y＝明るさ＋FX量
+            タッチパッド：X＝キー切替 / Y＝明るさ＋ループ感
           </div>
         </div>
 
@@ -263,10 +248,10 @@
           手順：<br />
           ①「オーディオ開始」でマイク許可（イヤホン推奨）<br />
           ② 入力デバイス（本体マイク / イヤホンマイクなど）を選択<br />
-          ③ 少し待つとマイク音からコードと反芻が生成され、だんだん重なっていきます。<br />
-          ・喋る / 手を叩く / 物音を立てる：コードの厚み・反芻が変化<br />
+          ③ 少し待つとマイク音からコードとループが生成され、だんだん重なっていきます。<br />
+          ・喋る / 手を叩く / 物音を立てる：コードの厚み・反芻の量が変化<br />
           ・パッドX：使うキー（C系 / Am系 / F系）が変化<br />
-          ・パッドY：サウンドの明るさ＋リバーブ／エコー量<br />
+          ・パッドY：サウンドの明るさ＋リバーブ量＋ループの抜け感<br />
           ※iPhoneではOS仕様により「本体マイク＋イヤホン出力」の完全分離はできない場合があります。
         </p>
       </div>
@@ -275,7 +260,7 @@
 
   <script type="module">
     if (location.protocol === "file:") {
-      alert("このアプリは file:// では動きません。ローカルサーバー or GitHub Pages (https) で開いてください。");
+      alert("このアプリは file:// では動きません。ローカルサーバーか https (例: GitHub Pages) で開いてください。");
     }
 
     // ===== DOM =====
@@ -297,7 +282,7 @@
       statusEl.textContent = msg || "";
     }
 
-    // シーンメタ（今回は1種類だけ）
+    // 1シーン分のメタデータ
     const SCENE_META = {
       micchord: { name: "Mic Lo-fi Chord Memory", icon: "☕", color: "#facc15" },
     };
@@ -345,7 +330,7 @@
     // Pad
     let padPointerActive = false;
 
-    // MIDIヘルパー
+    // ===== Helpers =====
     function midiToFreq(midi) {
       return 440 * Math.pow(2, (midi - 69) / 12);
     }
@@ -370,7 +355,10 @@
       constructor(ctx, inputNode, outputNode) {
         super(ctx, inputNode, outputNode);
 
-        this.tempoBpm      = 82;
+        this.ctx = ctx;
+        this.output = outputNode;
+
+        this.tempoBpm      = 80;
         this.nextEventTime = 0;
         this.stepIndex     = 0;  // 16分刻み
         this.schedulerId   = null;
@@ -396,7 +384,7 @@
             root: 45,   // A1
             chords: [
               [0, 3, 7, 10],   // Am7
-              [5, 9, 12, 16],  // Dm7(maj的)
+              [5, 9, 12, 16],  // Dm7
               [7, 10, 14, 17], // Em7
               [3, 7, 10, 14],  // Cmaj7-ish
             ],
@@ -425,36 +413,40 @@
 
         const c = this.ctx;
 
-        // マイク処理（高域ノイズを抑えるハイパス＋ドライ）
-        this.micHp = c.createBiquadFilter();
-        this.micHp.type = "highpass";
-        this.micHp.frequency.value = 140;
+        // マイクコア（ハイパス＋軽くローパス）
+        this.micCore = c.createBiquadFilter();
+        this.micCore.type = "highpass";
+        this.micCore.frequency.value = 120;
+        this.input.connect(this.micCore);
 
+        this.micSoftLP = c.createBiquadFilter();
+        this.micSoftLP.type = "lowpass";
+        this.micSoftLP.frequency.value = 9000;
+        this.micCore.connect(this.micSoftLP);
+
+        // ドライバス：環境感を出すための素のマイク
         this.micDry = c.createGain();
-        this.micDry.gain.value = 0.8;
-
-        this.input.connect(this.micHp);
-        this.micHp.connect(this.micDry);
+        this.micDry.gain.value = 0.35;
+        this.micSoftLP.connect(this.micDry);
         this.micDry.connect(this.output);
         if (reverbSend) this.micDry.connect(reverbSend);
 
-        // コード用バス
+        // コードバス：コードとして切り出されたマイク音
         this.chordBus = c.createGain();
-        this.chordBus.gain.value = 1.0;
+        this.chordBus.gain.value = 0.9;
         this.chordBus.connect(this.output);
         if (reverbSend) this.chordBus.connect(reverbSend);
-        if (delaySend)  this.chordBus.connect(delaySend);
 
-        // メモリー／ループ感を出すディレイネットワーク
+        // メモリーループ：コードバスを遅延＋フィードバック
         this.memoryDelay = c.createDelay(4.0);
-        this.memoryDelay.delayTime.value = 0.7;
+        this.memoryDelay.delayTime.value = 1.2;
 
         this.memoryFilter = c.createBiquadFilter();
         this.memoryFilter.type = "lowpass";
-        this.memoryFilter.frequency.value = 4200;
+        this.memoryFilter.frequency.value = 4500;
 
         this.memoryFeedback = c.createGain();
-        this.memoryFeedback.gain.value = 0.6;
+        this.memoryFeedback.gain.value = 0.65;
 
         this.memoryOut = c.createGain();
         this.memoryOut.gain.value = 0.95;
@@ -494,8 +486,9 @@
           this.schedulerId = null;
         }
         try {
-          this.input.disconnect(this.micHp);
-          this.micHp.disconnect();
+          this.input.disconnect(this.micCore);
+          this.micCore.disconnect();
+          this.micSoftLP.disconnect();
           this.micDry.disconnect();
           this.chordBus.disconnect();
           this.memoryDelay.disconnect();
@@ -537,43 +530,40 @@
           this.triggerChordFromMic(key.root, chordIntervals, time, 1.0);
         }
 
-        // 次のコードへ
         this.currentChordPos++;
         this.barCounter++;
 
-        // 転調判定：数小節に一度、なめらかにキーを変える
         const level = typeof inputLevel === "number" ? inputLevel : 0;
-        const modProb = 0.08 + randomness * 0.18 + level * 0.25;
+        const modProb = 0.08 + randomness * 0.2 + level * 0.25;
         if (this.barCounter > 8 && Math.random() < modProb) {
           this.modulateKey();
           this.barCounter = 0;
         }
 
-        // progression 自体をたまに切り替え
         if (Math.random() < 0.1 * randomness) {
           this.currentProgressionIndex = (this.currentProgressionIndex + 1) % this.progressions.length;
           this.currentChordPos = 0;
         }
 
-        // ドライマイクをすこしダッキング
+        // ドライマイクを少しダッキングしてコードを前に出す
         if (this.micDry) {
           const now = time;
+          const base = 0.35;
           const g = this.micDry.gain;
-          const current = g.value;
           g.cancelScheduledValues(now);
-          g.setValueAtTime(current, now);
-          g.linearRampToValueAtTime(current * 0.6, now + 0.06);
-          g.linearRampToValueAtTime(current, now + 0.8);
+          g.setValueAtTime(base, now);
+          g.linearRampToValueAtTime(base * 0.4, now + 0.05);
+          g.linearRampToValueAtTime(base, now + 0.9);
         }
       }
 
       onSubStep(stepInBar, time) {
         const level = typeof inputLevel === "number" ? inputLevel : 0;
 
-        // 2拍目・4拍目あたりでコードの断片を反芻
+        // 2拍目・4拍目っぽい位置でコードの断片を反芻（スネア的）
         const isBackBeat = stepInBar === 4 || stepInBar === 12;
         if (isBackBeat) {
-          const prob = 0.3 + randomness * 0.4 + level * 0.5;
+          const prob = 0.35 + randomness * 0.4 + level * 0.5;
           if (Math.random() < prob) {
             const prog = this.currentProgression;
             const idx = prog[(this.currentChordPos - 1 + prog.length) % prog.length];
@@ -585,7 +575,7 @@
           }
         }
 
-        // マイク反芻エコー：16分の合間で軽くtap
+        // 細かいマイク反芻エコー
         if (stepInBar % 2 === 1 && delaySend) {
           const echoProb = 0.15 + randomness * 0.3 + level * 0.4;
           if (Math.random() < echoProb) {
@@ -593,7 +583,7 @@
             tap.gain.setValueAtTime(0, time);
             tap.gain.linearRampToValueAtTime(0.7, time + 0.01);
             tap.gain.linearRampToValueAtTime(0, time + 0.18);
-            this.micHp.connect(tap);
+            this.micCore.connect(tap);
             tap.connect(delaySend);
             setTimeout(() => {
               try { tap.disconnect(); } catch {}
@@ -606,47 +596,42 @@
         const c = this.ctx;
         const level = typeof inputLevel === "number" ? inputLevel : 0;
 
-        const ampBase = 0.18 * velocity + level * 0.4;
-        const sustainBase = 0.8 * sustainFactor + this.padY * 0.7;
+        const baseAmp = 0.22 * velocity + level * 0.5;
+        const sustainBase = 0.7 * sustainFactor + this.padY * 0.6;
 
         intervals.forEach((semi, i) => {
           const bp = c.createBiquadFilter();
           bp.type = "bandpass";
 
-          const chordMidi = rootMidi + semi;
-          const invAmount = (this.padX - 0.5) * 2; // -1〜1
-          const octaveOffset = (i > 1) ? Math.round(invAmount) * 12 : 0;
-          const midi = chordMidi + octaveOffset;
-
+          const inv = (this.padX - 0.5) * 2; // -1〜1
+          const octaveOffset = (i > 1) ? Math.round(inv) * 12 : 0;
+          const midi = rootMidi + semi + octaveOffset;
           const freq = midiToFreq(midi);
-          bp.frequency.value = freq;
 
-          const qBase = 6 + randomness * 5;
-          bp.Q.value = qBase;
+          bp.frequency.value = freq;
+          bp.Q.value = 10 + randomness * 7;
 
           const env = c.createGain();
           const now = time;
-          const attack = 0.02;
+          const attack = 0.015;
           const sustain = sustainBase;
           const release = 0.35;
 
-          const amp = Math.max(0.02, ampBase);
+          const amp = Math.max(0.03, baseAmp);
 
           env.gain.setValueAtTime(0.0001, now);
           env.gain.exponentialRampToValueAtTime(amp, now + attack);
           env.gain.exponentialRampToValueAtTime(0.0001, now + sustain + release);
 
-          this.micHp.connect(bp);
+          this.micCore.connect(bp);
           bp.connect(env);
           env.connect(this.chordBus);
-
           if (reverbSend) env.connect(reverbSend);
-          if (delaySend)  env.connect(delaySend);
 
           const stopTime = now + sustain + release + 0.5;
           setTimeout(() => {
             try {
-              this.micHp.disconnect(bp);
+              this.micCore.disconnect(bp);
               bp.disconnect();
               env.disconnect();
             } catch {}
@@ -659,10 +644,9 @@
         this.currentKeyIndex = (this.currentKeyIndex + dir + this.keys.length) % this.keys.length;
         this.currentChordPos = 0;
 
-        // 転調時にディレイタイムを少しだけ変える
         if (this.memoryDelay) {
-          const base = 0.5;
-          const rand = 0.2 + Math.random() * 0.5;
+          const base = 0.8;
+          const rand = (Math.random() - 0.5) * 0.5;
           this.memoryDelay.delayTime.setValueAtTime(base + rand, this.ctx.currentTime);
         }
       }
@@ -680,7 +664,7 @@
         this.tempoBpm = minBpm + norm * (maxBpm - minBpm);
 
         if (this.memoryFeedback) {
-          const minFb = 0.45, maxFb = 0.75;
+          const minFb = 0.5, maxFb = 0.8;
           this.memoryFeedback.gain.setValueAtTime(minFb + norm * (maxFb - minFb), this.ctx.currentTime);
         }
       }
@@ -688,7 +672,7 @@
       handlePointer(xNorm, yNorm, isDown) {
         if (!this.started) return;
         this.padX = Math.max(0, Math.min(1, xNorm));
-        this.padY = Math.max(0, Math.min(1, 1 - yNorm)); // 上が明るくなる
+        this.padY = Math.max(0, Math.min(1, 1 - yNorm)); // 上ほど明るい
 
         const now = this.ctx.currentTime;
 
@@ -699,8 +683,12 @@
         // Y：明るさ＋FX量
         const bright = this.padY;
         if (this.memoryFilter) {
-          const minF = 1800, maxF = 7500;
+          const minF = 1800, maxF = 8000;
           this.memoryFilter.frequency.setValueAtTime(minF + bright * (maxF - minF), now);
+        }
+        if (this.micSoftLP) {
+          const minF = 3500, maxF = 12000;
+          this.micSoftLP.frequency.setValueAtTime(minF + bright * (maxF - minF), now);
         }
         if (reverbSend) {
           reverbSend.gain.setValueAtTime(0.25 + bright * 0.9, now);
@@ -715,23 +703,23 @@
         this.currentProgressionIndex = Math.floor(Math.random() * this.progressions.length);
         this.currentChordPos         = 0;
 
-        const tBase = 78;
-        const jitter = (Math.random() - 0.5) * 10 * randomness;
+        const tBase = 80;
+        const jitter = (Math.random() - 0.5) * 12 * randomness;
         this.tempoBpm = tBase + jitter;
 
         if (this.memoryDelay) {
-          const base = 0.6;
+          const base = 0.9;
           const rand = (Math.random() - 0.5) * 0.4;
           this.memoryDelay.delayTime.setValueAtTime(base + rand, this.ctx.currentTime);
         }
         if (this.memoryFeedback) {
-          const fb = 0.5 + Math.random() * 0.2;
+          const fb = 0.55 + Math.random() * 0.2;
           this.memoryFeedback.gain.setValueAtTime(fb, this.ctx.currentTime);
         }
       }
     }
 
-    // ===== シーン一覧（今回は1つだけ） =====
+    // ===== シーン一覧（1つだけ） =====
     const AVAILABLE_SCENES = [
       { id: "micchord", name: "Mic Lo-fi Chord Memory", factory: (ctx, input, output) => new MicChordMemoryScene(ctx, input, output) },
     ];
@@ -743,6 +731,21 @@
     applyInitialScene();
 
     // ===== Audio graph init =====
+    function createReverbImpulse(ctx, lengthSec = 2.5, decay = 3.0) {
+      const rate = ctx.sampleRate;
+      const length = Math.floor(lengthSec * rate);
+      const impulse = ctx.createBuffer(2, length, rate);
+      for (let ch = 0; ch < impulse.numberOfChannels; ch++) {
+        const data = impulse.getChannelData(ch);
+        for (let i = 0; i < length; i++) {
+          const t = i / length;
+          const env = Math.pow(1 - t, decay);
+          data[i] = (Math.random() * 2 - 1) * env;
+        }
+      }
+      return impulse;
+    }
+
     async function createAudioContextIfNeeded() {
       if (audioCtx) return;
       const AC = window.AudioContext || window.webkitAudioContext;
@@ -750,7 +753,11 @@
         setStatus("このブラウザは Web Audio API に対応していません。");
         throw new Error("Web Audio unsupported");
       }
-      audioCtx = new AC({ latencyHint: "interactive" });
+      try {
+        audioCtx = new AC({ latencyHint: "interactive" });
+      } catch (e) {
+        audioCtx = new AC();
+      }
       await audioCtx.resume();
 
       sceneInput = audioCtx.createGain();
@@ -760,6 +767,7 @@
       sceneInput.connect(masterGain);
       masterGain.connect(audioCtx.destination);
 
+      // Reverb
       reverbSend    = audioCtx.createGain();
       reverbNode    = audioCtx.createConvolver();
       reverbOutGain = audioCtx.createGain();
@@ -769,6 +777,7 @@
       reverbNode.connect(reverbOutGain);
       reverbOutGain.connect(masterGain);
 
+      // Delay
       delaySend      = audioCtx.createGain();
       delayNode      = audioCtx.createDelay(1.8);
       delayFeedback  = audioCtx.createGain();
@@ -788,21 +797,6 @@
 
       applyReverbLevel();
       applyDelayLevel();
-    }
-
-    function createReverbImpulse(ctx, lengthSec = 2.5, decay = 3.0) {
-      const rate = ctx.sampleRate;
-      const length = Math.floor(lengthSec * rate);
-      const impulse = ctx.createBuffer(2, length, rate);
-      for (let ch = 0; ch < impulse.numberOfChannels; ch++) {
-        const data = impulse.getChannelData(ch);
-        for (let i = 0; i < length; i++) {
-          const t = i / length;
-          const env = Math.pow(1 - t, decay);
-          data[i] = (Math.random() * 2 - 1) * env;
-        }
-      }
-      return impulse;
     }
 
     async function setMicDevice(deviceId) {
@@ -901,19 +895,16 @@
     async function ensureMotionAccessIfAvailable() {
       if (motionEnabled) return;
       if (typeof DeviceMotionEvent === "undefined") {
-        setStatus("加速度センサー非対応デバイスです（マイクのみで動作）。");
         return;
       }
       if (typeof DeviceMotionEvent.requestPermission === "function") {
         try {
           const res = await DeviceMotionEvent.requestPermission();
           if (res !== "granted") {
-            setStatus("モーションセンサー利用が拒否されました。動きによる変化はオフになります。");
             return;
           }
         } catch (err) {
           console.warn("DeviceMotion permission error:", err);
-          setStatus("モーションセンサー許可中にエラーが発生しました。");
           return;
         }
       }
@@ -995,21 +986,20 @@
       }
     }
 
-    // ===== Scene start / switch（1シーン固定だけど汎用的に書く） =====
+    // ===== Scene start / switch（1シーン固定） =====
     function startSelectedScene() {
       if (!audioCtx || !sceneInput || !masterGain) return;
-      const id = "micchord";
       const def = AVAILABLE_SCENES[0];
       if (!def) {
         setStatus("シーンが見つかりません。");
         return;
       }
       if (currentScene) currentScene.stop();
-      applySceneTheme(id);
+      applySceneTheme("micchord");
       currentScene = def.factory(audioCtx, sceneInput, masterGain);
       currentScene.start();
       reseedAndRandomize();
-      setStatus("マイク音からLo-fiコード反芻シーンを開始しました。");
+      setStatus("マイク音から Lo-fi コード反芻シーンを開始しました。");
     }
 
     // ===== UI Events =====
@@ -1043,7 +1033,7 @@
       }
     });
 
-    setStatus("「オーディオ開始」を押して、マイク音だけで生成されるLo-fiコード反芻を体験してください。");
+    setStatus("「オーディオ開始」を押して、マイク音だけで生成される Lo-fi コード＋ループ反芻を試してください。");
   </script>
 </body>
 </html>
