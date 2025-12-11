@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <title>RjDj-like Reactive Music (Realtime Web Version)</title>
+  <title>RjDj-like Reactive Music (Realtime Mic, Multi Scenes)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body {
@@ -83,8 +83,8 @@
   <main class="app">
     <h1>Reactive Music Web (RjDj-like)</h1>
     <p class="subtitle">
-      RjDj風のリアルタイム生成エンジン（マイク＋加速度＋タッチ入力）。<br />
-      ヘッドホン推奨・音量注意。
+      マイク入力をその場でリアルタイム処理・生成してヘッドホンに返す RjDj風エンジン。<br />
+      シーン切り替えで Ambient / House / Trance を選べます。ヘッドホン推奨・音量注意。
     </p>
 
     <section class="card">
@@ -95,42 +95,42 @@
           シーン:
           <select id="sceneSelect"></select>
         </label>
-
-        <button id="recordButton" disabled>録音開始</button>
       </div>
 
       <div id="status"></div>
       <p class="hint">
         手順：<br />
-        ①「オーディオ開始」を押してマイク/モーションを許可<br />
-        ② 喋る・歩く・スマホを振る・画面をなぞる → 音が変化<br />
-        ③ 「録音開始」→ もう一度押すと停止 &amp; ダウンロードリンク表示
+        ①「オーディオ開始」→ マイク &amp; モーションを許可<br />
+        ② シーンを選択（Ambient / House / Trance）<br />
+        ③ 喋る・動く・画面をなぞる → その瞬間の音がリアルタイムで変化して返ってきます。<br />
+        ※ハウリング防止のため必ずヘッドホン推奨
       </p>
     </section>
   </main>
 
   <script type="module">
+    // file:// 直開き防止
+    if (location.protocol === "file:") {
+      alert("このアプリは file:// では動きません。\nローカルサーバーか GitHub Pages（https）で開いてください。");
+    }
+
     // ===== DOM =====
-    const startButton   = document.getElementById("startButton");
-    const sceneSelect   = document.getElementById("sceneSelect");
-    const recordButton  = document.getElementById("recordButton");
-    const statusEl      = document.getElementById("status");
+    const startButton = document.getElementById("startButton");
+    const sceneSelect = document.getElementById("sceneSelect");
+    const statusEl    = document.getElementById("status");
 
     function setStatus(msg) {
       statusEl.textContent = msg || "";
     }
 
     // ===== Audio globals =====
-    let audioCtx       = null;
-    let micStream      = null;
-    let micSource      = null;
-    let sceneInput     = null;   // シーン用バス（マイク入力）
-    let masterGain     = null;   // 全体出力
-    let recordDest     = null;   // MediaRecorder 用
-    let mediaRecorder  = null;
-    let recordChunks   = [];
-    let currentScene   = null;
-    let motionEnabled  = false;
+    let audioCtx   = null;
+    let micStream  = null;
+    let micSource  = null;
+    let sceneInput = null;
+    let masterGain = null;
+    let currentScene = null;
+    let motionEnabled = false;
     let inputListenersAttached = false;
 
     // ===== Base Scene class =====
@@ -141,23 +141,18 @@
         this.output = outputNode;
         this.started = false;
       }
-      start() {
-        this.started = true;
-      }
-      stop() {
-        this.started = false;
-      }
+      start() { this.started = true; }
+      stop()  { this.started = false; }
       handleMotion(_ev) {}
       handlePointer(_x, _y, _isDown) {}
     }
 
-    // ===== HybridReactiveScene
-    // マイク + ディレイネットワーク + 生成シンセ（リアルタイムスケジューリング）
-    class HybridReactiveScene extends BaseScene {
+    // ===== AmbientReactiveScene =====
+    // 元のハイブリッドリアクティブシーン（環境音 + ランダムフレーズ）
+    class AmbientReactiveScene extends BaseScene {
       constructor(ctx, inputNode, outputNode) {
         super(ctx, inputNode, outputNode);
 
-        // マイク処理
         this.micDry     = ctx.createGain();
         this.micFXGain  = ctx.createGain();
         this.delay1     = ctx.createDelay(1.0);
@@ -167,15 +162,13 @@
         this.filter     = ctx.createBiquadFilter();
         this.fxPanner   = ctx.createStereoPanner();
 
-        // 生成シンセ用
         this.schedulerId   = null;
         this.nextEventTime = 0;
-        this.tempoBpm      = 90;           // 加速度で変化
-        this.basePitch     = 220;          // A3
+        this.tempoBpm      = 90;
+        this.basePitch     = 220;
         this.scale         = [0, 3, 5, 7, 10, 12]; // マイナーペンタ
-        this.motionAmount  = 0;           // 0〜1
-        this.panFromMotion = 0;           // -1〜1
-
+        this.motionAmount  = 0;
+        this.panFromMotion = 0;
         this.touchX        = 0.5;
         this.touchY        = 0.5;
         this.touchDown     = false;
@@ -184,45 +177,34 @@
       start() {
         if (this.started) return;
         super.start();
-
         const ctx = this.ctx;
 
-        // マイクdry/wet
         this.input.connect(this.micDry);
         this.micDry.connect(this.output);
-
         this.input.connect(this.micFXGain);
 
-        // ディレイネットワーク（簡易リバーブ／エコー）
         this.micFXGain.connect(this.delay1);
         this.delay1.connect(this.fb1);
         this.fb1.connect(this.delay2);
         this.delay2.connect(this.fb2);
-        this.fb2.connect(this.delay1);  // ループ
+        this.fb2.connect(this.delay1);
 
-        // ディレイ出力 → フィルタ → パン → 出力
         this.delay1.connect(this.filter);
         this.delay2.connect(this.filter);
         this.filter.connect(this.fxPanner);
         this.fxPanner.connect(this.output);
 
-        // 初期パラメータ
         this.micDry.gain.value    = 0.6;
         this.micFXGain.gain.value = 0.8;
-
         this.delay1.delayTime.value = 0.18;
         this.delay2.delayTime.value = 0.31;
-
         this.fb1.gain.value = 0.35;
         this.fb2.gain.value = 0.48;
-
         this.filter.type = "bandpass";
         this.filter.frequency.value = 1400;
         this.filter.Q.value = 1.2;
-
         this.fxPanner.pan.value = 0;
 
-        // 生成シンセのスケジューラー開始
         this.nextEventTime = ctx.currentTime + 0.1;
         this.schedulerId = setInterval(() => this.schedule(), 50);
       }
@@ -246,51 +228,43 @@
         }
       }
 
-      // AudioContext.currentTime ベースのリアルタイム生成
       schedule() {
         if (!this.started) return;
         const ctx = this.ctx;
-        const lookAhead = 0.15; // 150ms先までスケジュール
+        const lookAhead = 0.15;
 
         while (this.nextEventTime < ctx.currentTime + lookAhead) {
           this.triggerGrain(this.nextEventTime);
-
-          const beatDur = 60 / this.tempoBpm; // BPM → 秒
+          const beatDur = 60 / this.tempoBpm;
           this.nextEventTime += beatDur;
         }
       }
 
       triggerGrain(time) {
         const ctx = this.ctx;
-
         const osc = ctx.createOscillator();
         const env = ctx.createGain();
         const pan = ctx.createStereoPanner();
 
-        // タッチ位置からスケールインデックス
         let idx = Math.floor(this.touchX * this.scale.length);
         if (idx < 0) idx = 0;
         if (idx >= this.scale.length) idx = this.scale.length - 1;
 
-        const semitone = this.scale[idx] + (this.touchDown ? 12 : 0); // 押してると1オクターブ上
+        const semitone = this.scale[idx] + (this.touchDown ? 12 : 0);
         const freq = this.basePitch * Math.pow(2, semitone / 12);
 
-        // 波形はタッチYで変化（上＝sine、下＝square寄り）
-        const waveformMix = this.touchY; // 0~1
+        const waveformMix = this.touchY;
         osc.type = waveformMix > 0.5 ? "square" : "sine";
-
         osc.frequency.setValueAtTime(freq, time);
 
-        // エンベロープ（動き + タッチYで長さ変化）
         const baseDur = 0.12;
-        const extraDur = (1 - this.touchY) * 0.35; // 上に行くほど短く
+        const extraDur = (1 - this.touchY) * 0.35;
         const duration = baseDur + extraDur;
 
         env.gain.setValueAtTime(0, time);
         env.gain.linearRampToValueAtTime(0.8, time + 0.01);
         env.gain.linearRampToValueAtTime(0, time + duration);
 
-        // パンはモーション + 少しランダム
         const randJitter = (Math.random() - 0.5) * 0.3;
         const panValue = (this.panFromMotion * 0.7) + randJitter;
         pan.pan.setValueAtTime(Math.max(-1, Math.min(1, panValue)), time);
@@ -312,26 +286,22 @@
         const y = acc.y || 0;
         const z = acc.z || 0;
 
-        const magnitude = Math.min(Math.sqrt(x*x + y*y + z*z), 30);
-        const norm = magnitude / 30; // 0〜1
+        const mag  = Math.min(Math.sqrt(x*x + y*y + z*z), 30);
+        const norm = mag / 30;
 
         this.motionAmount = norm;
 
-        // 動きが激しいほどテンポUP・フィルタ明るく
         const minBpm = 60;
         const maxBpm = 190;
         this.tempoBpm = minBpm + norm * (maxBpm - minBpm);
 
         const minFreq = 500;
         const maxFreq = 4000;
-        const freq = minFreq + norm * (maxFreq - minFreq);
-        this.filter.frequency.value = freq;
+        this.filter.frequency.value = minFreq + norm * (maxFreq - minFreq);
 
-        // 横方向の加速度でFXパン
         this.panFromMotion = Math.max(-1, Math.min(1, x / 8));
         this.fxPanner.pan.value = this.panFromMotion * 0.8;
 
-        // 動きが激しいとフィードバックもやや強く
         const fbBase = 0.25;
         const fbMax  = 0.85;
         const fbVal  = fbBase + norm * (fbMax - fbBase);
@@ -345,30 +315,435 @@
         this.touchY = yNorm;
         this.touchDown = !!isDown;
 
-        // タッチ位置でマイクdry/wetバランスを操作
-        const dry = 0.2 + (1 - yNorm) * 0.8; // 上: ドライ多め
-        const wet = 0.1 + yNorm * 0.9;       // 下: ウェット多め
-
+        const dry = 0.2 + (1 - yNorm) * 0.8;
+        const wet = 0.1 + yNorm * 0.9;
         this.micDry.gain.value    = dry;
         this.micFXGain.gain.value = wet;
 
-        // 画面右寄りでベースピッチ高め
         const minPitch = 160;
         const maxPitch = 330;
         this.basePitch = minPitch + xNorm * (maxPitch - minPitch);
 
-        // 押している間はフィルタのQを上げてピーキーに
         this.filter.Q.value = isDown ? 8.0 : 1.2;
+      }
+    }
+
+    // ===== HouseScene =====
+    // 4つ打ちキック + ハット + ベースの簡易ハウス
+    class HouseScene extends BaseScene {
+      constructor(ctx, inputNode, outputNode) {
+        super(ctx, inputNode, outputNode);
+        this.tempoBpm = 124;
+        this.nextEventTime = 0;
+        this.stepIndex = 0; // 16ステップ/小節
+        this.schedulerId = null;
+
+        this.touchX = 0.5;
+        this.touchY = 0.5;
+        this.touchDown = false;
+        this.motionAmount = 0;
+
+        // ベースパターン（16ステップ、null は休符）
+        this.bassPattern = [0, null, 7, null, 5, null, 7, null, 3, null, 7, null, 5, null, null, null];
+
+        // noise buffer for hats
+        const length = Math.floor(ctx.sampleRate * 0.2);
+        this.noiseBuffer = ctx.createBuffer(1, length, ctx.sampleRate);
+        const data = this.noiseBuffer.getChannelData(0);
+        for (let i = 0; i < length; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+      }
+
+      start() {
+        if (this.started) return;
+        super.start();
+        const ctx = this.ctx;
+
+        // マイクはそのまま（やや小さめ）でミックス
+        this.micGain = ctx.createGain();
+        this.micGain.gain.value = 0.7;
+        this.input.connect(this.micGain);
+        this.micGain.connect(this.output);
+
+        this.nextEventTime = ctx.currentTime + 0.1;
+        this.schedulerId = setInterval(() => this.schedule(), 25);
+      }
+
+      stop() {
+        if (!this.started) return;
+        super.stop();
+        try { this.micGain.disconnect(); } catch {}
+        if (this.schedulerId) {
+          clearInterval(this.schedulerId);
+          this.schedulerId = null;
+        }
+      }
+
+      schedule() {
+        if (!this.started) return;
+        const ctx = this.ctx;
+        const lookAhead = 0.1;
+        const beatDur = 60 / this.tempoBpm;    // 1拍（4分音符）
+        const stepDur = beatDur / 4;           // 16分音符
+
+        while (this.nextEventTime < ctx.currentTime + lookAhead) {
+          this.triggerStep(this.stepIndex, this.nextEventTime);
+          this.stepIndex = (this.stepIndex + 1) % 16;
+          this.nextEventTime += stepDur;
+        }
+      }
+
+      triggerStep(step, time) {
+        // Kick: 4分音符（0,4,8,12）
+        if (step % 4 === 0) {
+          this.triggerKick(time);
+        }
+        // Hat: 8分音符（偶数ステップ）
+        if (step % 2 === 1) {
+          this.triggerHat(time);
+        }
+        // Bass: パターンに応じて
+        const pitch = this.bassPattern[step];
+        if (pitch !== null) {
+          this.triggerBass(time, pitch);
+        }
+      }
+
+      triggerKick(time) {
+        const ctx = this.ctx;
+        const osc = ctx.createOscillator();
+        const env = ctx.createGain();
+
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(110, time);
+        osc.frequency.exponentialRampToValueAtTime(40, time + 0.08);
+
+        env.gain.setValueAtTime(0.0001, time);
+        env.gain.exponentialRampToValueAtTime(1.0, time + 0.005);
+        env.gain.exponentialRampToValueAtTime(0.0001, time + 0.25);
+
+        osc.connect(env);
+        env.connect(this.output);
+
+        osc.start(time);
+        osc.stop(time + 0.3);
+      }
+
+      triggerHat(time) {
+        const ctx = this.ctx;
+        const src = ctx.createBufferSource();
+        src.buffer = this.noiseBuffer;
+
+        const hp = ctx.createBiquadFilter();
+        hp.type = "highpass";
+        hp.frequency.value = 6000 + this.motionAmount * 4000;
+
+        const env = ctx.createGain();
+        env.gain.setValueAtTime(0.0001, time);
+        env.gain.exponentialRampToValueAtTime(0.6, time + 0.005);
+        env.gain.exponentialRampToValueAtTime(0.0001, time + 0.1);
+
+        src.connect(hp);
+        hp.connect(env);
+        env.connect(this.output);
+
+        src.start(time);
+        src.stop(time + 0.15);
+      }
+
+      triggerBass(time, patternSemitone) {
+        const ctx = this.ctx;
+        const osc = ctx.createOscillator();
+        const filter = ctx.createBiquadFilter();
+        const env = ctx.createGain();
+
+        osc.type = "sawtooth";
+
+        const baseFreq = 55 * Math.pow(2, this.touchX * 2); // E1〜E3くらい
+        const freq = baseFreq * Math.pow(2, patternSemitone / 12);
+        osc.frequency.setValueAtTime(freq, time);
+
+        filter.type = "lowpass";
+        const cutoffBase = 500 + this.motionAmount * 2000;
+        filter.frequency.setValueAtTime(cutoffBase, time);
+        filter.Q.value = 0.8;
+
+        env.gain.setValueAtTime(0.0001, time);
+        env.gain.exponentialRampToValueAtTime(0.8, time + 0.01);
+        env.gain.exponentialRampToValueAtTime(0.0001, time + 0.25);
+
+        osc.connect(filter);
+        filter.connect(env);
+        env.connect(this.output);
+
+        osc.start(time);
+        osc.stop(time + 0.3);
+      }
+
+      handleMotion(ev) {
+        if (!this.started || !ev) return;
+        const acc = ev.accelerationIncludingGravity || ev.acceleration;
+        if (!acc) return;
+
+        const x = acc.x || 0;
+        const y = acc.y || 0;
+        const z = acc.z || 0;
+
+        const mag = Math.min(Math.sqrt(x*x + y*y + z*z), 25);
+        const norm = mag / 25;
+
+        this.motionAmount = norm;
+
+        // 動きに応じてテンポ微調整（120〜130 BPM）
+        const minBpm = 120;
+        const maxBpm = 130;
+        this.tempoBpm = minBpm + norm * (maxBpm - minBpm);
+      }
+
+      handlePointer(xNorm, yNorm, isDown) {
+        if (!this.started) return;
+        this.touchX = xNorm;
+        this.touchY = yNorm;
+        this.touchDown = !!isDown;
+
+        // マイク音量を少し動かしても良い
+        const dry = 0.4 + (1 - yNorm) * 0.6;
+        this.micGain.gain.value = dry;
+      }
+    }
+
+    // ===== TranceScene =====
+    // 速いBPM + アルペジオ + フィルタスイープのざっくりトランス
+    class TranceScene extends BaseScene {
+      constructor(ctx, inputNode, outputNode) {
+        super(ctx, inputNode, outputNode);
+        this.tempoBpm = 138;
+        this.nextEventTime = 0;
+        this.stepIndex = 0;
+        this.schedulerId = null;
+
+        this.touchX = 0.5;
+        this.touchY = 0.5;
+        this.touchDown = false;
+        this.motionAmount = 0;
+
+        this.arpeggio = [0, 7, 12, 7]; // 簡易アルペジオ
+      }
+
+      start() {
+        if (this.started) return;
+        super.start();
+        const ctx = this.ctx;
+
+        // マイクに軽くディレイをかけつつミックス
+        this.micDry = ctx.createGain();
+        this.micFX  = ctx.createGain();
+        this.delay  = ctx.createDelay(1.0);
+        this.delayFb = ctx.createGain();
+        this.filter = ctx.createBiquadFilter();
+
+        this.micDry.gain.value = 0.6;
+        this.micFX.gain.value  = 0.7;
+
+        this.input.connect(this.micDry);
+        this.micDry.connect(this.output);
+
+        this.input.connect(this.micFX);
+        this.micFX.connect(this.delay);
+        this.delay.connect(this.delayFb);
+        this.delayFb.connect(this.delay);
+        this.delay.connect(this.filter);
+        this.filter.connect(this.output);
+
+        this.delay.delayTime.value = 0.25;
+        this.delayFb.gain.value = 0.35;
+        this.filter.type = "lowpass";
+        this.filter.frequency.value = 3000;
+        this.filter.Q.value = 1.0;
+
+        this.nextEventTime = ctx.currentTime + 0.1;
+        this.schedulerId = setInterval(() => this.schedule(), 25);
+      }
+
+      stop() {
+        if (!this.started) return;
+        super.stop();
+        try { this.micDry.disconnect(); } catch {}
+        try { this.micFX.disconnect(); } catch {}
+        try { this.delay.disconnect(); } catch {}
+        try { this.delayFb.disconnect(); } catch {}
+        try { this.filter.disconnect(); } catch {}
+        if (this.schedulerId) {
+          clearInterval(this.schedulerId);
+          this.schedulerId = null;
+        }
+      }
+
+      schedule() {
+        if (!this.started) return;
+        const ctx = this.ctx;
+        const lookAhead = 0.12;
+        const beatDur = 60 / this.tempoBpm;
+        const stepDur = beatDur / 2; // 8分音符刻み
+
+        while (this.nextEventTime < ctx.currentTime + lookAhead) {
+          this.triggerStep(this.stepIndex, this.nextEventTime);
+          this.stepIndex = (this.stepIndex + 1) % 8;
+          this.nextEventTime += stepDur;
+        }
+      }
+
+      triggerStep(step, time) {
+        // 1,3,5,7 ステップでキック
+        if (step % 4 === 0) {
+          this.triggerKick(time);
+        }
+        // すべてのステップでハイハット気味クリック
+        this.triggerClick(time);
+
+        // アルペジオ（偶数ステップで鳴らす）
+        if (step % 2 === 0) {
+          const index = (step / 2) % this.arpeggio.length;
+          const semitone = this.arpeggio[index];
+          this.triggerPluck(time, semitone);
+        }
+      }
+
+      triggerKick(time) {
+        const ctx = this.ctx;
+        const osc = ctx.createOscillator();
+        const env = ctx.createGain();
+
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(130, time);
+        osc.frequency.exponentialRampToValueAtTime(45, time + 0.06);
+
+        env.gain.setValueAtTime(0.0001, time);
+        env.gain.exponentialRampToValueAtTime(1.0, time + 0.004);
+        env.gain.exponentialRampToValueAtTime(0.0001, time + 0.2);
+
+        osc.connect(env);
+        env.connect(this.output);
+
+        osc.start(time);
+        osc.stop(time + 0.25);
+      }
+
+      triggerClick(time) {
+        const ctx = this.ctx;
+        const osc = ctx.createOscillator();
+        const env = ctx.createGain();
+
+        osc.type = "square";
+        osc.frequency.setValueAtTime(8000, time);
+        env.gain.setValueAtTime(0.0001, time);
+        env.gain.exponentialRampToValueAtTime(0.3, time + 0.002);
+        env.gain.exponentialRampToValueAtTime(0.0001, time + 0.05);
+
+        osc.connect(env);
+        env.connect(this.output);
+
+        osc.start(time);
+        osc.stop(time + 0.08);
+      }
+
+      triggerPluck(time, semitone) {
+        const ctx = this.ctx;
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const filter = ctx.createBiquadFilter();
+        const env = ctx.createGain();
+
+        const baseFreq = 220 * Math.pow(2, this.touchX * 1.5); // ベースピッチ（Xで変化）
+        const freq = baseFreq * Math.pow(2, semitone / 12);
+
+        osc1.type = "sawtooth";
+        osc2.type = "sawtooth";
+
+        osc1.frequency.setValueAtTime(freq * 0.985, time);
+        osc2.frequency.setValueAtTime(freq * 1.015, time);
+
+        filter.type = "lowpass";
+        const minCut = 2000;
+        const maxCut = 8000;
+        const cutoff = minCut + this.motionAmount * (maxCut - minCut);
+        filter.frequency.setValueAtTime(cutoff, time);
+        filter.Q.value = 1.2 + this.touchY * 4;
+
+        env.gain.setValueAtTime(0.0001, time);
+        env.gain.exponentialRampToValueAtTime(0.9, time + 0.01);
+        const rel = 0.25 + (1 - this.touchY) * 0.25;
+        env.gain.exponentialRampToValueAtTime(0.0001, time + rel);
+
+        osc1.connect(filter);
+        osc2.connect(filter);
+        filter.connect(env);
+        env.connect(this.output);
+
+        osc1.start(time);
+        osc2.start(time);
+        osc1.stop(time + rel + 0.1);
+        osc2.stop(time + rel + 0.1);
+      }
+
+      handleMotion(ev) {
+        if (!this.started || !ev) return;
+        const acc = ev.accelerationIncludingGravity || ev.acceleration;
+        if (!acc) return;
+
+        const x = acc.x || 0;
+        const y = acc.y || 0;
+        const z = acc.z || 0;
+
+        const mag = Math.min(Math.sqrt(x*x + y*y + z*z), 30);
+        const norm = mag / 30;
+        this.motionAmount = norm;
+
+        const minBpm = 132;
+        const maxBpm = 145;
+        this.tempoBpm = minBpm + norm * (maxBpm - minBpm);
+
+        const cutoffBase = 2500;
+        const cutoffMax  = 9000;
+        if (this.filter) {
+          this.filter.frequency.value = cutoffBase + norm * (cutoffMax - cutoffBase);
+        }
+      }
+
+      handlePointer(xNorm, yNorm, isDown) {
+        if (!this.started) return;
+        this.touchX = xNorm;
+        this.touchY = yNorm;
+        this.touchDown = !!isDown;
+
+        if (this.micDry) {
+          const dryGain = 0.4 + (1 - yNorm) * 0.6;
+          this.micDry.gain.value = dryGain;
+        }
+        if (this.micFX) {
+          this.micFX.gain.value = 0.3 + yNorm * 0.7;
+        }
       }
     }
 
     // ===== Scene list =====
     const AVAILABLE_SCENES = [
       {
-        id: "hybrid-reactive",
-        name: "Hybrid Reactive (Mic + Generative)",
-        create: (ctx, input, output) => new HybridReactiveScene(ctx, input, output),
+        id: "ambient",
+        name: "Ambient Reactive",
+        create: (ctx, input, output) => new AmbientReactiveScene(ctx, input, output)
       },
+      {
+        id: "house",
+        name: "House",
+        create: (ctx, input, output) => new HouseScene(ctx, input, output)
+      },
+      {
+        id: "trance",
+        name: "Trance",
+        create: (ctx, input, output) => new TranceScene(ctx, input, output)
+      }
     ];
 
     function populateSceneSelect() {
@@ -392,7 +767,9 @@
         throw new Error("Web Audio unsupported");
       }
 
-      audioCtx = new AC();
+      audioCtx = new AC({
+        latencyHint: "interactive"
+      });
       await audioCtx.resume();
 
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -400,7 +777,13 @@
         throw new Error("getUserMedia unsupported");
       }
 
-      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      micStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false
+        }
+      });
       micSource = audioCtx.createMediaStreamSource(micStream);
 
       sceneInput = audioCtx.createGain();
@@ -410,28 +793,16 @@
       micSource.connect(sceneInput);
       masterGain.connect(audioCtx.destination);
 
-      // 録音用MediaRecorder
-      recordDest = audioCtx.createMediaStreamDestination();
-      masterGain.connect(recordDest);
-      mediaRecorder = new MediaRecorder(recordDest.stream);
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) {
-          recordChunks.push(e.data);
-        }
-      };
-      mediaRecorder.onstop = handleRecordingStop;
-
       setupGlobalPointerListeners();
       setStatus("オーディオ初期化完了。シーンを開始できます。");
     }
 
-    // ===== Motion access (iOS向け対応含む) =====
+    // ===== Motion access =====
     async function ensureMotionAccessIfAvailable() {
       if (motionEnabled) return;
 
       if (typeof DeviceMotionEvent === "undefined") {
-        setStatus("加速度センサー非対応デバイスです（マイクだけで動作）。");
+        setStatus("加速度センサー非対応デバイスです（マイクのみで動作）。");
         return;
       }
 
@@ -439,7 +810,7 @@
         try {
           const res = await DeviceMotionEvent.requestPermission();
           if (res !== "granted") {
-            setStatus("モーションセンサー利用が拒否されました。動きによる変化はオフ。");
+            setStatus("モーションセンサー利用が拒否されました。動きによる変化はオフになります。");
             return;
           }
         } catch (err) {
@@ -467,7 +838,6 @@
         const xNorm = ev.clientX / window.innerWidth;
         const yNorm = ev.clientY / window.innerHeight;
         const isDown = ev.buttons > 0 || ev.type === "pointerdown";
-
         currentScene.handlePointer(xNorm, yNorm, isDown);
       };
 
@@ -496,27 +866,7 @@
       currentScene = def.create(audioCtx, sceneInput, masterGain);
       currentScene.start();
 
-      recordButton.disabled = false;
-      setStatus(`シーン「${def.name}」再生中。周囲の音と動きで変化します。`);
-    }
-
-    // ===== Recording =====
-    function handleRecordingStop() {
-      if (!recordChunks.length) {
-        setStatus("録音データがありません。");
-        return;
-      }
-      const blob = new Blob(recordChunks, { type: "audio/webm" });
-      const url = URL.createObjectURL(blob);
-
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "rjdj-web-reactive.webm";
-      link.textContent = "録音ファイルを保存";
-
-      statusEl.innerHTML = "";
-      statusEl.appendChild(link);
-      recordChunks = [];
+      setStatus(`シーン「${def.name}」再生中。マイク音と動きで音が変化します。`);
     }
 
     // ===== UI Events =====
@@ -536,20 +886,7 @@
       startSelectedScene();
     });
 
-    recordButton.addEventListener("click", () => {
-      if (!mediaRecorder) return;
-      if (mediaRecorder.state === "inactive") {
-        recordChunks = [];
-        mediaRecorder.start();
-        recordButton.textContent = "録音停止";
-        setStatus("録音中… もう一度ボタンを押すと停止します。");
-      } else if (mediaRecorder.state === "recording") {
-        mediaRecorder.stop();
-        recordButton.textContent = "録音開始";
-      }
-    });
-
-    setStatus("「オーディオ開始」を押してマイク/センサーを有効化してください。");
+    setStatus("「オーディオ開始」を押してリアルタイム生成を開始してください。");
   </script>
 </body>
 </html>
