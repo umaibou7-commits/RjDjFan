@@ -2,13 +2,15 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8" />
-  <title>RjDj-like Reactive Music (Realtime Mic, Multi Scenes)</title>
+  <title>RjDj-like Reactive Music Web</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root {
       --accent-color: #38bdf8;
       --accent-soft: rgba(56, 189, 248, 0.24);
-      --accent-bg: radial-gradient(circle at top, rgba(56,189,248,0.16), #020617);
+    }
+    * {
+      box-sizing: border-box;
     }
     body {
       font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -200,11 +202,10 @@
 </head>
 <body>
   <main class="app">
-    <h1>Reactive Music Web (RjDj-like)</h1>
+    <h1>RjDj-like Reactive Music Web</h1>
     <p class="subtitle">
-      マイク入力をその場でリアルタイム処理・生成して返すブラウザ版 RjDj。<br />
-      各モードごとにグルーヴと色・アイコンを変えつつ、リバーブ・エコー・ランダム度を調整できます。<br />
-      イヤホン / 本体マイクが複数検出される場合は、入力デバイスの選択も可能です（ブラウザ依存）。
+      マイク入力をその場でリアルタイム生成・変換するブラウザ版 RjDj 風アプリ。<br />
+      「RjDj-style Shimmer」モードで、環境音や声が美しいコードクラウドに溶けていきます。
     </p>
 
     <section class="card">
@@ -258,21 +259,20 @@
         <div id="status"></div>
         <p class="hint">
           手順：<br />
-          ①「オーディオ開始」→ マイク & モーションを許可<br />
-          ② 入力デバイス（本体マイク / イヤホンマイク 等）が表示されたら選択（ブラウザ依存）<br />
-          ③ シーンを選択（Ambient / House / Trance / Techno / Drum’n’Bass / Lo-fi）<br />
-          ④ パッドをなぞる・スマホを振る・喋る → その瞬間の音がリアルタイムに変化します。<br />
-          ⑤ 「ランダム化」でシードとパターンを再抽選。<br />
-          ※ハウリング防止のため必ずヘッドホン推奨
+          ①「オーディオ開始」でマイク許可（必ずイヤホン推奨）<br />
+          ② 入力デバイス（本体マイク / イヤホンマイク など）を選択<br />
+          ③ シーンを「RjDj-style Shimmer」に変更<br />
+          ④ 静かな環境で少し待って、声を出したり物音を立てたり、スマホを振ったり、パッドをなぞると音が反応します。<br />
+          ※iPhoneはOS仕様で「本体マイク＋イヤホン出力」の完全分離ができない場合があります。
         </p>
       </div>
     </section>
   </main>
 
   <script type="module">
-    // file:// 直開きは getUserMedia が動きづらいのでアラートだけ出しておく
+    // file:// 直開きはマイク権限が取れないので注意
     if (location.protocol === "file:") {
-      alert("このアプリは file:// では動きません。ローカルサーバーか GitHub Pages（https）で開いてください。");
+      alert("このアプリは file:// では動きません。ローカルサーバー or GitHub Pages (https) で開いてください。");
     }
 
     // ===== DOM =====
@@ -294,16 +294,12 @@
       statusEl.textContent = msg || "";
     }
 
-    // ===== Scene meta (アイコン / 色) =====
+    // ===== Scene meta (UIの色・アイコン) =====
     const SCENE_META = {
-      ambient: { name: "Ambient Reactive", icon: "🌌", color: "#38bdf8" },
-      house:   { name: "House",            icon: "🏠", color: "#f97316" },
-      trance:  { name: "Trance",           icon: "✨", color: "#a855f7" },
-      techno:  { name: "Techno",           icon: "⚙️", color: "#22c55e" },
-      dnb:     { name: "Drum’n’Bass",      icon: "🥁", color: "#eab308" },
-      lofi:    { name: "Lo-fi",            icon: "☕", color: "#facc15" },
-      // 将来 Pd を噛ませたい場合:
-      // pd:   { name: "Pd Scene",          icon: "🧠", color: "#ec4899" },
+      ambient: { name: "Ambient Reactive",   icon: "🌌", color: "#38bdf8" },
+      house:   { name: "House",              icon: "🏠", color: "#f97316" },
+      trance:  { name: "Trance",             icon: "✨", color: "#a855f7" },
+      rjdj:    { name: "RjDj-style Shimmer", icon: "🌀", color: "#ec4899" },
     };
 
     function applySceneTheme(sceneId) {
@@ -321,13 +317,19 @@
 
     let micStream  = null;
     let micSource  = null;
-    let inputGain  = null;   // グローバル入力ゲイン
-    let selectedDeviceId = "";  // 現在選択中の deviceId
+    let inputGain  = null;
+    let selectedDeviceId = "";
 
-    // グローバル FX
+    // 入力レベル解析
+    let inputAnalyser = null;
+    let inputLevel    = 0;
+    let inputLevelTimer = null;
+
+    // グローバルFX
     let reverbSend    = null;
     let reverbNode    = null;
     let reverbOutGain = null;
+
     let delaySend     = null;
     let delayNode     = null;
     let delayFeedback = null;
@@ -340,7 +342,7 @@
     let randomness = parseFloat(randomSlider.value || "0.7");
     let currentSeed = null;
 
-    // パッド
+    // Pad
     let padPointerActive = false;
 
     // ===== Reverb impulse =====
@@ -374,10 +376,7 @@
       randomize(_seed) {}
     }
 
-    // ===== 個々のシーン実装 =====
-    // ここは前回までに作った House / Trance / Techno / DnB / Lo-fi / Ambient を
-    // ほぼそのまま使っています（一部コンパクト化＆seed対応）。
-
+    // ===== Ambient Scene =====
     class AmbientReactiveScene extends BaseScene {
       constructor(ctx, inputNode, outputNode) {
         super(ctx, inputNode, outputNode);
@@ -510,7 +509,6 @@
         if (this.micFx)  this.micFx.gain.value  = 0.3 + yNorm * 0.9;
       }
       randomize(seed) {
-        // seed は現状表示用のみ。厳密に再現したかったら seed 付き乱数を使う
         this.scaleIndex = Math.floor(Math.random() * this.scaleOptions.length);
         const baseOptions = [110, 165, 220, 330];
         this.basePitch = baseOptions[Math.floor(Math.random() * baseOptions.length)];
@@ -519,9 +517,7 @@
       }
     }
 
-    // 以下、House / Trance / Techno / DnB / Lo-Fi はコンパクト実装
-    // （長くなるのでコメントは控えめに）
-
+    // ===== House Scene =====
     class HouseScene extends BaseScene {
       constructor(ctx, inputNode, outputNode) {
         super(ctx, inputNode, outputNode);
@@ -675,7 +671,7 @@
       }
     }
 
-    // Trance
+    // ===== Trance Scene =====
     class TranceScene extends BaseScene {
       constructor(ctx, inputNode, outputNode) {
         super(ctx, inputNode, outputNode);
@@ -826,18 +822,258 @@
       }
     }
 
-    // TechnoScene・DnbScene・LoFiScene は長くなるのでそのまま使いますが、
-    // 省略せずに全部書くと相当長いので、このままでも動かしたければ
-    // さっき渡したバージョンの3クラスを BaseScene 対応でコピペしてもOKです。
-    // ここでは紙幅の都合で Ambient / House / Trance を軸に説明します。
+    // ===== RjDj-style Shimmer Scene =====
+    class RjdjShimmerScene extends BaseScene {
+      constructor(ctx, inputNode, outputNode) {
+        super(ctx, inputNode, outputNode);
 
-    // ===== Scene list =====
+        this.tempoBpm      = 90;
+        this.nextEventTime = 0;
+        this.schedulerId   = null;
+
+        this.padX = 0.5;
+        this.padY = 0.5;
+        this.motionAmount = 0;
+
+        this.scales = [
+          [0, 3, 5, 7, 10],
+          [0, 2, 4, 7, 9],
+          [0, 2, 5, 7, 9, 12],
+        ];
+        this.scaleIndex = 0;
+        this.rootMidi   = 48;
+
+        const c = this.ctx;
+
+        // mic chain
+        this.micHp = c.createBiquadFilter();
+        this.micHp.type = "highpass";
+        this.micHp.frequency.value = 200;
+        this.input.connect(this.micHp);
+
+        this.micDry = c.createGain();
+        this.micDry.gain.value = 0.1;
+        this.micHp.connect(this.micDry);
+        this.micDry.connect(this.output);
+
+        this.micToFxGain = c.createGain();
+        this.micToFxGain.gain.value = 0.9;
+        this.micHp.connect(this.micToFxGain);
+
+        this.chorusDelay = c.createDelay(0.05);
+        this.chorusDelay.delayTime.value = 0.02;
+        this.chorusGain = c.createGain();
+        this.chorusGain.gain.value = 0.8;
+        this.micToFxGain.connect(this.chorusDelay);
+        this.chorusDelay.connect(this.chorusGain);
+
+        this.lfo = c.createOscillator();
+        this.lfoGain = c.createGain();
+        this.lfo.frequency.value = 0.25;
+        this.lfoGain.gain.value  = 0.01;
+        this.lfo.connect(this.lfoGain);
+        this.lfoGain.connect(this.chorusDelay.delayTime);
+        this.lfo.start();
+
+        this.tap1 = c.createDelay(2.0);
+        this.tap2 = c.createDelay(2.0);
+        this.tap1.delayTime.value = 0.35;
+        this.tap2.delayTime.value = 0.62;
+
+        this.tap1Filter = c.createBiquadFilter();
+        this.tap2Filter = c.createBiquadFilter();
+        this.tap1Filter.type = "lowpass";
+        this.tap2Filter.type = "lowpass";
+        this.tap1Filter.frequency.value = 6000;
+        this.tap2Filter.frequency.value = 5000;
+
+        this.tap1Gain = c.createGain();
+        this.tap2Gain = c.createGain();
+        this.tap1Gain.gain.value = 0.6;
+        this.tap2Gain.gain.value = 0.5;
+
+        this.tap1Fb = c.createGain();
+        this.tap2Fb = c.createGain();
+        this.tap1Fb.gain.value = 0.5;
+        this.tap2Fb.gain.value = 0.55;
+
+        this.tap1Pan = c.createStereoPanner();
+        this.tap2Pan = c.createStereoPanner();
+        this.tap1Pan.pan.value = -0.5;
+        this.tap2Pan.pan.value =  0.5;
+
+        this.chorusGain.connect(this.tap1);
+        this.chorusGain.connect(this.tap2);
+
+        this.tap1.connect(this.tap1Filter);
+        this.tap1Filter.connect(this.tap1Gain);
+        this.tap1Gain.connect(this.tap1Pan);
+        this.tap1Pan.connect(this.output);
+        if (reverbSend) this.tap1Pan.connect(reverbSend);
+
+        this.tap2.connect(this.tap2Filter);
+        this.tap2Filter.connect(this.tap2Gain);
+        this.tap2Gain.connect(this.tap2Pan);
+        this.tap2Pan.connect(this.output);
+        if (reverbSend) this.tap2Pan.connect(reverbSend);
+
+        this.tap1Gain.connect(this.tap1Fb);
+        this.tap1Fb.connect(this.tap1);
+        this.tap2Gain.connect(this.tap2Fb);
+        this.tap2Fb.connect(this.tap2);
+      }
+
+      get scale() {
+        return this.scales[this.scaleIndex] || this.scales[0];
+      }
+
+      start() {
+        if (this.started) return;
+        super.start();
+        const c = this.ctx;
+        this.nextEventTime = c.currentTime + 0.3;
+        this.schedulerId = setInterval(() => this.schedule(), 50);
+      }
+
+      stop() {
+        if (!this.started) return;
+        super.stop();
+        if (this.schedulerId) {
+          clearInterval(this.schedulerId);
+          this.schedulerId = null;
+        }
+        try {
+          this.input.disconnect(this.micHp);
+          this.micHp.disconnect();
+          this.micDry.disconnect();
+          this.micToFxGain.disconnect();
+          this.chorusDelay.disconnect();
+          this.chorusGain.disconnect();
+          this.tap1.disconnect();
+          this.tap2.disconnect();
+          this.tap1Filter.disconnect();
+          this.tap2Filter.disconnect();
+          this.tap1Gain.disconnect();
+          this.tap2Gain.disconnect();
+          this.tap1Fb.disconnect();
+          this.tap2Fb.disconnect();
+          this.tap1Pan.disconnect();
+          this.tap2Pan.disconnect();
+        } catch {}
+        try { this.lfo.stop(); } catch {}
+      }
+
+      schedule() {
+        if (!this.started) return;
+        const c = this.ctx;
+        const lookAhead = 0.25;
+        const beat = 60 / this.tempoBpm;
+
+        while (this.nextEventTime < c.currentTime + lookAhead) {
+          const level = typeof inputLevel === "number" ? inputLevel : 0;
+          const density = 0.1 + randomness * 0.3 + level * 0.9;
+          if (Math.random() < density) {
+            this.triggerPadNote(this.nextEventTime, level);
+          }
+          const factor = 0.35 + Math.random() * 0.4 * (1 + this.motionAmount);
+          this.nextEventTime += beat * factor;
+        }
+      }
+
+      triggerPadNote(time, level) {
+        const c = this.ctx;
+        const osc1 = c.createOscillator();
+        const osc2 = c.createOscillator();
+        const env  = c.createGain();
+        const filter = c.createBiquadFilter();
+        const pan = c.createStereoPanner();
+
+        let idx = Math.floor(this.padX * this.scale.length);
+        idx = Math.max(0, Math.min(this.scale.length - 1, idx));
+        const semitone = this.scale[idx];
+
+        const baseRoot = this.rootMidi + Math.round((this.padY - 0.5) * 12);
+        const midi = baseRoot + semitone + (Math.random() < 0.3 ? 12 : 0);
+        const freq = 440 * Math.pow(2, (midi - 69) / 12);
+
+        osc1.type = "sine";
+        osc2.type = "triangle";
+        osc1.frequency.setValueAtTime(freq * 0.99, time);
+        osc2.frequency.setValueAtTime(freq * 1.01, time);
+
+        filter.type = "lowpass";
+        const minCut = 1000, maxCut = 9000;
+        const brightness = this.padY * 0.5 + this.motionAmount * 0.5;
+        filter.frequency.setValueAtTime(minCut + brightness * (maxCut - minCut), time);
+        filter.Q.value = 0.7 + randomness * 5;
+
+        const amp = 0.2 + level * 0.8;
+        env.gain.setValueAtTime(0.0001, time);
+        env.gain.exponentialRampToValueAtTime(amp, time + 0.02);
+        const sustain = 0.3 + this.padY * 0.5 + randomness * 0.3;
+        env.gain.exponentialRampToValueAtTime(0.0001, time + sustain);
+
+        const panPos = (Math.random() - 0.5) * (0.3 + this.motionAmount * 0.7);
+        pan.pan.setValueAtTime(panPos, time);
+
+        osc1.connect(filter);
+        osc2.connect(filter);
+        filter.connect(env);
+        env.connect(pan);
+        pan.connect(this.output);
+        if (reverbSend) env.connect(reverbSend);
+        if (delaySend)  env.connect(delaySend);
+
+        osc1.start(time);
+        osc2.start(time);
+        osc1.stop(time + sustain + 0.5);
+        osc2.stop(time + sustain + 0.5);
+      }
+
+      handleMotion(ev) {
+        if (!this.started || !ev) return;
+        const acc = ev.accelerationIncludingGravity || ev.acceleration;
+        if (!acc) return;
+        const x = acc.x || 0, y = acc.y || 0, z = acc.z || 0;
+        const mag = Math.min(Math.sqrt(x*x + y*y + z*z), 25);
+        const norm = mag / 25;
+        this.motionAmount = norm;
+        const minBpm = 70, maxBpm = 110;
+        this.tempoBpm = minBpm + norm * (maxBpm - minBpm);
+        const baseFreq = 0.15 + norm * 0.6;
+        this.lfo.frequency.setValueAtTime(baseFreq, this.ctx.currentTime);
+      }
+
+      handlePointer(xNorm, yNorm, isDown) {
+        if (!this.started) return;
+        this.padX = xNorm;
+        this.padY = 1 - yNorm;
+
+        const wet = yNorm;
+        const now = this.ctx.currentTime;
+        if (reverbSend) reverbSend.gain.setValueAtTime(0.3 + wet * 0.9, now);
+        if (delaySend)  delaySend.gain.setValueAtTime(0.2 + wet * 0.8, now);
+
+        const fx = 0.4 + (1 - yNorm) * 1.0;
+        this.micToFxGain.gain.setValueAtTime(fx, now);
+
+        const dry = 0.05 + yNorm * 0.3;
+        this.micDry.gain.setValueAtTime(dry, now);
+      }
+
+      randomize(seed) {
+        this.scaleIndex = Math.floor(Math.random() * this.scales.length);
+        const roots = [36, 40, 43, 48, 52];
+        this.rootMidi = roots[Math.floor(Math.random() * roots.length)];
+      }
+    }
+
+    // ===== シーン一覧 =====
     const AVAILABLE_SCENES = [
-      { id: "ambient", name: "Ambient Reactive", factory: (ctx, input, output) => new AmbientReactiveScene(ctx, input, output) },
-      { id: "house",   name: "House",            factory: (ctx, input, output) => new HouseScene(ctx, input, output) },
-      { id: "trance",  name: "Trance",           factory: (ctx, input, output) => new TranceScene(ctx, input, output) },
-      // Pd を噛ませるときは、PdScene を定義してここに追加:
-      // { id: "pd",      name: "Pd Scene",         factory: (ctx, input, output) => new PdScene(ctx, input, output, pdInstance) },
+      { id: "ambient", name: "Ambient Reactive",   factory: (ctx, input, output) => new AmbientReactiveScene(ctx, input, output) },
+      { id: "house",   name: "House",              factory: (ctx, input, output) => new HouseScene(ctx, input, output) },
+      { id: "trance",  name: "Trance",             factory: (ctx, input, output) => new TranceScene(ctx, input, output) },
+      { id: "rjdj",    name: "RjDj-style Shimmer", factory: (ctx, input, output) => new RjdjShimmerScene(ctx, input, output) },
     ];
 
     function populateSceneSelect() {
@@ -848,10 +1084,12 @@
         opt.textContent = s.name;
         sceneSelect.appendChild(opt);
       });
+      sceneSelect.value = "rjdj"; // デフォルトでRjDjモード
+      applySceneTheme("rjdj");
     }
     populateSceneSelect();
 
-    // ===== Audio graph init & mic handling =====
+    // ===== Audio graph init =====
     async function createAudioContextIfNeeded() {
       if (audioCtx) return;
       const AC = window.AudioContext || window.webkitAudioContext;
@@ -866,13 +1104,9 @@
       masterGain = audioCtx.createGain();
       masterGain.gain.value = 0.9;
 
-      // 入力ゲインを挟む（小さいマイクの音量をここで底上げ可能）
-      inputGain = audioCtx.createGain();
-      inputGain.gain.value = 1.2; // イヤホンマイクが小さい場合の補正
-      inputGain.connect(sceneInput);
+      sceneInput.connect(masterGain);
       masterGain.connect(audioCtx.destination);
 
-      // グローバルリバーブ
       reverbSend    = audioCtx.createGain();
       reverbNode    = audioCtx.createConvolver();
       reverbOutGain = audioCtx.createGain();
@@ -881,7 +1115,6 @@
       reverbNode.connect(reverbOutGain);
       reverbOutGain.connect(masterGain);
 
-      // グローバルエコー
       delaySend      = audioCtx.createGain();
       delayNode      = audioCtx.createDelay(1.5);
       delayFeedback  = audioCtx.createGain();
@@ -899,7 +1132,6 @@
       delayFilter.connect(delayFeedback);
       delayFeedback.connect(delayNode);
 
-      // FXレベル初期値反映
       applyReverbLevel();
       applyDelayLevel();
     }
@@ -911,7 +1143,6 @@
       }
       selectedDeviceId = deviceId || "";
 
-      // 既存ストリームを停止
       if (micStream) {
         micStream.getTracks().forEach(t => t.stop());
         micStream = null;
@@ -934,19 +1165,41 @@
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       micStream = stream;
-
       micSource = audioCtx.createMediaStreamSource(stream);
+
       if (!inputGain) {
         inputGain = audioCtx.createGain();
-        inputGain.gain.value = 1.2;
+        inputGain.gain.value = 1.4;
         inputGain.connect(sceneInput);
       }
       micSource.connect(inputGain);
+
+      if (!inputAnalyser) {
+        inputAnalyser = audioCtx.createAnalyser();
+        inputAnalyser.fftSize = 256;
+        inputAnalyser.smoothingTimeConstant = 0.8;
+        inputGain.connect(inputAnalyser);
+
+        const buffer = new Uint8Array(inputAnalyser.fftSize);
+        if (inputLevelTimer) clearInterval(inputLevelTimer);
+        inputLevelTimer = setInterval(() => {
+          if (!inputAnalyser) return;
+          inputAnalyser.getByteTimeDomainData(buffer);
+          let sum = 0;
+          for (let i = 0; i < buffer.length; i++) {
+            const v = (buffer[i] - 128) / 128;
+            sum += v * v;
+          }
+          const rms = Math.sqrt(sum / buffer.length);
+          inputLevel = rms;
+        }, 50);
+      }
     }
 
     async function populateInputDevices() {
       if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
         inputSelect.innerHTML = "<option>未対応</option>";
+        inputSelect.disabled = true;
         return;
       }
       const devices = await navigator.mediaDevices.enumerateDevices();
@@ -960,7 +1213,6 @@
       audioInputs.forEach((d, idx) => {
         const opt = document.createElement("option");
         opt.value = d.deviceId;
-        // ラベルが空でも一応番号付きで表示
         opt.textContent = d.label || `マイク ${idx + 1}`;
         inputSelect.appendChild(opt);
       });
@@ -1004,7 +1256,7 @@
       motionEnabled = true;
     }
 
-    // ===== パッド操作 =====
+    // ===== Pad操作 =====
     function updatePadCursor(xNorm, yNorm) {
       const clampedX = Math.max(0, Math.min(1, xNorm));
       const clampedY = Math.max(0, Math.min(1, yNorm));
@@ -1115,7 +1367,7 @@
     });
 
     inputSelect.addEventListener("change", async () => {
-      if (!audioCtx) return; // まだ init 前
+      if (!audioCtx) return;
       try {
         const newId = inputSelect.value;
         await setMicDevice(newId);
