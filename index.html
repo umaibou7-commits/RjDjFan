@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Reactive Scene — 周囲の音が、幻のように響く</title>
+<title>Reactive Scene — 環境 × ジャイロで奏でる電子音楽</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -18,44 +18,47 @@
   body{background:var(--bg);color:var(--text);font-family:"Space Grotesk",system-ui,sans-serif;overflow:hidden;-webkit-tap-highlight-color:transparent;touch-action:none}
   canvas#scene{position:fixed;inset:0;width:100%;height:100%;display:block}
 
-  #gate{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;padding:32px;text-align:center;background:radial-gradient(120% 120% at 50% 30%, rgba(167,139,250,0.12), var(--bg) 60%)}
+  #gate{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:32px;text-align:center;background:radial-gradient(120% 120% at 50% 30%, rgba(167,139,250,0.12), var(--bg) 60%)}
   #gate .eyebrow{font-family:"Space Mono",monospace;font-size:12px;letter-spacing:0.35em;text-transform:uppercase;color:var(--muted)}
-  #gate h1{font-weight:700;font-size:clamp(32px,8.5vw,64px);line-height:0.98;letter-spacing:-0.02em;background:linear-gradient(110deg,var(--teal),var(--violet) 45%,var(--rose));-webkit-background-clip:text;background-clip:text;color:transparent}
-  #gate p{max-width:32ch;color:var(--muted);font-size:15px;line-height:1.65}
-  #startBtn{margin-top:6px;font-family:"Space Grotesk",sans-serif;font-weight:500;font-size:17px;color:var(--bg);background:var(--text);border:none;border-radius:999px;padding:16px 40px;cursor:pointer;transition:transform .15s ease, box-shadow .3s ease;box-shadow:0 0 0 0 rgba(167,139,250,0.5)}
+  #gate h1{font-weight:700;font-size:clamp(32px,8.5vw,62px);line-height:0.98;letter-spacing:-0.02em;background:linear-gradient(110deg,var(--teal),var(--violet) 45%,var(--rose));-webkit-background-clip:text;background-clip:text;color:transparent}
+  #gate p{max-width:34ch;color:var(--muted);font-size:15px;line-height:1.65}
+  #startBtn{margin-top:4px;font-family:"Space Grotesk",sans-serif;font-weight:500;font-size:17px;color:var(--bg);background:var(--text);border:none;border-radius:999px;padding:16px 40px;cursor:pointer;transition:transform .15s ease, box-shadow .3s ease;box-shadow:0 0 0 0 rgba(167,139,250,0.5)}
   #startBtn:active{transform:scale(0.97)}
   #startBtn:hover{box-shadow:0 0 40px 2px rgba(167,139,250,0.35)}
   #startBtn:focus-visible{outline:2px solid var(--violet);outline-offset:4px}
-  #gate .perm{font-family:"Space Mono",monospace;font-size:11px;color:var(--muted);max-width:36ch;line-height:1.7}
+  #gate .perm{font-family:"Space Mono",monospace;font-size:11px;color:var(--muted);max-width:40ch;line-height:1.7}
 
-  #hud{position:fixed;inset:0;z-index:20;pointer-events:none;display:none;flex-direction:column;justify-content:space-between;padding:env(safe-area-inset-top,18px) 18px env(safe-area-inset-bottom,18px)}
+  #hud{position:fixed;inset:0;z-index:20;pointer-events:none;display:none;flex-direction:column;justify-content:space-between;padding:env(safe-area-inset-top,16px) 16px env(safe-area-inset-bottom,16px)}
   #hud.on{display:flex}
   .row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
-  .badge{font-family:"Space Mono",monospace;font-size:11px;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);background:var(--surface);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:999px;padding:8px 14px}
-  .panel{pointer-events:auto;background:var(--surface);backdrop-filter:blur(16px);border:1px solid var(--line);border-radius:18px;padding:14px 16px;min-width:150px}
-  .panel h2{font-family:"Space Mono",monospace;font-size:10px;letter-spacing:0.25em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;font-weight:400}
-  .meter{display:flex;align-items:center;gap:8px;margin:7px 0;font-family:"Space Mono",monospace;font-size:11px;color:var(--muted)}
-  .meter label{width:46px;flex:none}
+  .badge{font-family:"Space Mono",monospace;font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);background:var(--surface);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:999px;padding:8px 14px}
+  #dragBadge{display:none;color:var(--amber);border-color:rgba(251,191,36,0.4)}
+  #dragBadge.on{display:inline-block}
+  .panel{pointer-events:auto;background:var(--surface);backdrop-filter:blur(16px);border:1px solid var(--line);border-radius:18px;padding:13px 15px;min-width:158px}
+  .panel h2{font-family:"Space Mono",monospace;font-size:10px;letter-spacing:0.25em;text-transform:uppercase;color:var(--muted);margin-bottom:9px;font-weight:400}
+  .meter{display:flex;align-items:center;gap:8px;margin:6px 0;font-family:"Space Mono",monospace;font-size:11px;color:var(--muted)}
+  .meter label{width:62px;flex:none}
   .meter .track{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,0.08);overflow:hidden}
-  .meter .fill{height:100%;width:0%;border-radius:2px;transition:width .08s linear}
-  .meter .val{width:38px;text-align:right;color:var(--text)}
+  .meter .fill{height:100%;width:0%;border-radius:2px;transition:width .06s linear}
+  .meter .val{width:36px;text-align:right;color:var(--text)}
+  #micDev{margin-top:8px;width:100%;font-family:"Space Mono",monospace;font-size:10px;color:var(--text);background:rgba(11,10,31,0.6);border:1px solid var(--line);border-radius:8px;padding:6px 8px;outline:none}
 
-  .controls{pointer-events:auto;display:flex;flex-direction:column;gap:13px;max-width:170px}
-  .ctrl label{display:flex;justify-content:space-between;font-family:"Space Mono",monospace;font-size:11px;letter-spacing:0.08em;color:var(--muted);margin-bottom:6px}
+  .controls{pointer-events:auto;display:flex;flex-direction:column;gap:10px;max-width:176px}
+  .ctrl label{display:flex;justify-content:space-between;font-family:"Space Mono",monospace;font-size:11px;letter-spacing:0.05em;color:var(--muted);margin-bottom:5px}
   .ctrl .val{color:var(--text)}
   input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:3px;border-radius:2px;background:rgba(255,255,255,0.12);outline:none}
-  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--violet);cursor:pointer;box-shadow:0 0 12px rgba(167,139,250,0.6)}
-  input[type=range]::-moz-range-thumb{width:18px;height:18px;border:none;border-radius:50%;background:var(--violet);cursor:pointer}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:17px;height:17px;border-radius:50%;background:var(--violet);cursor:pointer;box-shadow:0 0 12px rgba(167,139,250,0.6)}
+  input[type=range]::-moz-range-thumb{width:17px;height:17px;border:none;border-radius:50%;background:var(--violet);cursor:pointer}
   input[type=range]:focus-visible{outline:2px solid var(--violet);outline-offset:4px}
 
-  .bottombar{display:flex;align-items:flex-end;justify-content:space-between;gap:16px}
-  .pills{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}
-  .pill{font-family:"Space Grotesk",sans-serif;font-size:12px;font-weight:500;color:var(--text);background:var(--surface);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:999px;padding:10px 16px;cursor:pointer}
+  .bottombar{display:flex;align-items:flex-end;justify-content:space-between;gap:14px}
+  .pills{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap;max-width:62vw}
+  .pill{font-family:"Space Grotesk",sans-serif;font-size:12px;font-weight:500;color:var(--text);background:var(--surface);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:999px;padding:10px 15px;cursor:pointer}
   .pill.active{color:var(--bg);background:var(--violet);border-color:var(--violet)}
   .pill:focus-visible{outline:2px solid var(--violet);outline-offset:3px}
-  #stopBtn{pointer-events:auto;font-family:"Space Grotesk",sans-serif;font-size:13px;font-weight:500;color:var(--text);background:var(--surface);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:999px;padding:12px 22px;cursor:pointer}
+  #stopBtn{pointer-events:auto;font-family:"Space Grotesk",sans-serif;font-size:13px;font-weight:500;color:var(--text);background:var(--surface);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:999px;padding:12px 20px;cursor:pointer;flex:none}
   #stopBtn:active{transform:scale(0.97)}
-  @media (max-width:560px){.panel{min-width:124px;padding:11px 12px}.controls{max-width:150px}}
+  @media (max-width:560px){.panel{min-width:132px;padding:10px 12px}.controls{max-width:154px}.pills{max-width:52vw}.meter label{width:56px}}
   @media (prefers-reduced-motion:reduce){#startBtn{transition:none}}
 </style>
 </head>
@@ -64,10 +67,10 @@
 
 <div id="gate">
   <div class="eyebrow">Reactive Scene</div>
-  <h1>周囲の音が、<br>幻のように響く。</h1>
-  <p>マイクが拾った周りの音を、粒に砕いてピッチを上げ、長い残響とディレイに溶かします。話し声も足音も、いつのまにか調性のあるきらめきに。端末の傾き・向きが音を操ります。<strong>必ずヘッドホンで。</strong></p>
+  <h1>傾けて、<br>踊らせる。</h1>
+  <p>周囲の音を砕いた幻想的なテクスチャに、コードの余韻とサイドチェインの効いたビート。<strong>左右の傾き=DJフィルター</strong>、<strong>前後=ビルド↔ブレイク</strong>、<strong>振る=フィル</strong>。<strong>ヘッドホン必須。</strong></p>
   <button id="startBtn">シーンをはじめる</button>
-  <div class="perm">マイクとモーションセンサーの許可を求めます。HTTPS（公開URL）でのみ動作します。</div>
+  <div class="perm">マイクとモーションの許可が必要・HTTPS限定。Bluetoothイヤホンはマイクが通話品質に切替わるため、内蔵マイクへ自動回避します（パネルで手動選択も可）。</div>
 </div>
 
 <div id="hud">
@@ -75,31 +78,37 @@
     <div class="panel" id="sensors">
       <h2>Sensors</h2>
       <div class="meter"><label>SOUND</label><div class="track"><div class="fill" id="m-rms" style="background:var(--teal)"></div></div><span class="val" id="v-rms">0</span></div>
-      <div class="meter"><label>COMPASS</label><div class="track"><div class="fill" id="m-alpha" style="background:var(--violet)"></div></div><span class="val" id="v-alpha">0°</span></div>
-      <div class="meter"><label>TILT Y</label><div class="track"><div class="fill" id="m-beta" style="background:var(--amber)"></div></div><span class="val" id="v-beta">0°</span></div>
-      <div class="meter"><label>TILT X</label><div class="track"><div class="fill" id="m-gamma" style="background:var(--rose)"></div></div><span class="val" id="v-gamma">0°</span></div>
+      <div class="meter"><label>KEY/向き</label><div class="track"><div class="fill" id="m-alpha" style="background:var(--violet)"></div></div><span class="val" id="v-alpha">0°</span></div>
+      <div class="meter"><label>ENERGY前後</label><div class="track"><div class="fill" id="m-beta" style="background:var(--amber)"></div></div><span class="val" id="v-beta">50%</span></div>
+      <div class="meter"><label>FILTER左右</label><div class="track"><div class="fill" id="m-gamma" style="background:var(--rose)"></div></div><span class="val" id="v-gamma">––</span></div>
+      <select id="micDev" title="入力デバイス"><option>マイク：起動後に選択</option></select>
     </div>
-    <div class="badge" id="keyBadge">KEY · —</div>
+    <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">
+      <div class="badge" id="keyBadge">KEY · —</div>
+      <div class="badge" id="dragBadge">DRAG MODE</div>
+    </div>
   </div>
 
   <div class="row" style="align-items:flex-end">
     <div></div>
     <div class="controls panel">
-      <h2>Scene</h2>
-      <div class="ctrl"><label>テンポ <span class="val" id="lab-tempo">88</span></label><input type="range" id="tempo" min="50" max="150" value="88"></div>
-      <div class="ctrl"><label>テクスチャ <span class="val" id="lab-grain">0.70</span></label><input type="range" id="grain" min="0" max="100" value="70"></div>
-      <div class="ctrl"><label>残響 <span class="val" id="lab-reverb">0.65</span></label><input type="range" id="reverb" min="0" max="100" value="65"></div>
-      <div class="ctrl"><label>ディレイ <span class="val" id="lab-delay">0.45</span></label><input type="range" id="delay" min="0" max="100" value="45"></div>
-      <div class="ctrl"><label>シンセ <span class="val" id="lab-synth">0.35</span></label><input type="range" id="synth" min="0" max="100" value="35"></div>
+      <h2>Mix</h2>
+      <div class="ctrl"><label>テンポ <span class="val" id="lab-tempo">172</span></label><input type="range" id="tempo" min="60" max="180" value="172"></div>
+      <div class="ctrl"><label>ドラム <span class="val" id="lab-drums">0.85</span></label><input type="range" id="drums" min="0" max="100" value="85"></div>
+      <div class="ctrl"><label>テクスチャ <span class="val" id="lab-grain">0.50</span></label><input type="range" id="grain" min="0" max="100" value="50"></div>
+      <div class="ctrl"><label>残響 <span class="val" id="lab-reverb">0.58</span></label><input type="range" id="reverb" min="0" max="100" value="58"></div>
+      <div class="ctrl"><label>ディレイ <span class="val" id="lab-delay">0.42</span></label><input type="range" id="delay" min="0" max="100" value="42"></div>
+      <div class="ctrl"><label>入力感度 <span class="val" id="lab-sens">1.8</span></label><input type="range" id="sens" min="20" max="600" value="180"></div>
     </div>
   </div>
 
   <div class="bottombar">
     <button id="stopBtn">停止</button>
     <div class="pills">
-      <button class="pill active" data-scene="dream">Dream</button>
-      <button class="pill" data-scene="haunt">Haunt</button>
-      <button class="pill" data-scene="choir">Choir</button>
+      <button class="pill" data-groove="ambient">Ambient</button>
+      <button class="pill" data-groove="house">House</button>
+      <button class="pill" data-groove="twostep">2-Step</button>
+      <button class="pill active" data-groove="dnb">DnB</button>
     </div>
   </div>
 </div>
@@ -107,13 +116,13 @@
 <script>
 "use strict";
 /* =====================================================================
-   Reactive Scene v2 — RJDJ的・環境反応型ジェネラティブ音楽
-   核心: マイク入力をグラニュラー合成(AudioWorklet)でピッチシフト・粒化し、
-         シマーリバーブ + ピンポンディレイに溶かして「幻聴」的テクスチャを作る。
-   依存なし / 単一HTML / Worklet は Blob URL でロード。
+   Reactive Scene v4 — 音楽的強化 + Bluetoothマイク対策
+   追加:
+     ・サイドチェイン(キックで全体ダッキング) ／ 持続パッド+コード進行
+     ・オートパンLFO ＋ 広いランダムパン ／ マルコフ旋律＋小節ごと変奏＋ヒューマナイズ
+     ・余韻を長く(グルーヴ別テイル) ／ 入力デバイス選択＋入力ゲイン＋コンプ＋自動正規化(AGC)
    ===================================================================== */
 
-/* ---------- グラニュラー AudioWorklet（文字列→Blob でロード） ---------- */
 const GRANULAR_WORKLET = `
 class Granular extends AudioWorkletProcessor {
   static get parameterDescriptors(){
@@ -126,50 +135,39 @@ class Granular extends AudioWorkletProcessor {
   }
   constructor(){
     super();
-    this.bufLen = Math.floor(sampleRate*3.0);
-    this.buf = new Float32Array(this.bufLen);
-    this.writePos = 0; this.filled = 0;
-    this.grains = [];
-    this.ratios = [1, 1.5, 2];            // 許可ピッチ比（メインから更新）
-    this.sinceGrain = 0;
-    this.MAX = 64;
-    this.port.onmessage = (e)=>{ if(e.data && e.data.ratios) this.ratios = e.data.ratios; };
+    this.bufLen=Math.floor(sampleRate*3.0); this.buf=new Float32Array(this.bufLen);
+    this.writePos=0; this.filled=0; this.grains=[]; this.ratios=[1,1.5,2]; this.sinceGrain=0; this.MAX=72;
+    this.port.onmessage=(e)=>{ if(e.data&&e.data.ratios) this.ratios=e.data.ratios; };
   }
-  spawn(spread, grainMs){
-    if(this.grains.length >= this.MAX) return;
-    const len = Math.max(64, Math.floor(sampleRate*grainMs/1000));
-    const back = Math.floor((0.12 + Math.random()*Math.max(0.05,spread)*0.85)*this.bufLen);
-    let pos = this.writePos - back; while(pos<0) pos += this.bufLen;
-    const rate = this.ratios[(Math.random()*this.ratios.length)|0]*(1+(Math.random()*2-1)*0.012);
-    const pan = Math.random(), amp = 0.45 + Math.random()*0.55;
-    this.grains.push({pos, rate, age:0, len, gL:Math.cos(pan*Math.PI/2)*amp, gR:Math.sin(pan*Math.PI/2)*amp});
+  spawn(spread,grainMs){
+    if(this.grains.length>=this.MAX) return;
+    const len=Math.max(64,Math.floor(sampleRate*grainMs/1000));
+    const back=Math.floor((0.12+Math.random()*Math.max(0.05,spread)*0.85)*this.bufLen);
+    let pos=this.writePos-back; while(pos<0) pos+=this.bufLen;
+    const rate=this.ratios[(Math.random()*this.ratios.length)|0]*(1+(Math.random()*2-1)*0.012);
+    const pan=Math.random(), amp=0.4+Math.random()*0.6;
+    this.grains.push({pos,rate,age:0,len,gL:Math.cos(pan*Math.PI/2)*amp,gR:Math.sin(pan*Math.PI/2)*amp});
   }
-  process(inputs, outputs, params){
-    const inCh = (inputs[0] && inputs[0][0]) ? inputs[0][0] : null;
-    const out = outputs[0], outL = out[0], outR = out[1];
-    const n = outL.length;
-    const density = params.density[0], spread = params.spread[0];
-    const grainMs = params.grainMs[0], wet = params.wet[0];
-    const interval = Math.max(1, Math.floor(sampleRate*(0.004 + (1-density)*0.16)));
+  process(inputs,outputs,params){
+    const inCh=(inputs[0]&&inputs[0][0])?inputs[0][0]:null;
+    const out=outputs[0], outL=out[0], outR=out[1], n=outL.length;
+    const density=params.density[0], spread=params.spread[0], grainMs=params.grainMs[0], wet=params.wet[0];
+    const interval=Math.max(1,Math.floor(sampleRate*(0.004+(1-density)*0.16)));
     for(let i=0;i<n;i++){
-      if(inCh) this.buf[this.writePos] = inCh[i];
-      this.writePos = (this.writePos+1)%this.bufLen;
-      if(this.filled<this.bufLen) this.filled++;
-      if(++this.sinceGrain >= interval && this.filled > sampleRate*0.3){
-        this.sinceGrain = 0; this.spawn(spread, grainMs);
-      }
-      let sL=0, sR=0;
-      for(let gi=this.grains.length-1; gi>=0; gi--){
+      if(inCh) this.buf[this.writePos]=inCh[i];
+      this.writePos=(this.writePos+1)%this.bufLen; if(this.filled<this.bufLen) this.filled++;
+      if(++this.sinceGrain>=interval && this.filled>sampleRate*0.3){ this.sinceGrain=0; this.spawn(spread,grainMs); }
+      let sL=0,sR=0;
+      for(let gi=this.grains.length-1;gi>=0;gi--){
         const gr=this.grains[gi];
-        const w = 0.5 - 0.5*Math.cos(2*Math.PI*gr.age/gr.len);
-        const ip = gr.pos|0, frac = gr.pos-ip;
-        const a = this.buf[ip%this.bufLen], b = this.buf[(ip+1)%this.bufLen];
-        const s = (a+(b-a)*frac)*w;
-        sL += s*gr.gL; sR += s*gr.gR;
-        gr.pos += gr.rate; if(gr.pos>=this.bufLen) gr.pos-=this.bufLen;
-        if(++gr.age >= gr.len) this.grains.splice(gi,1);
+        const w=0.5-0.5*Math.cos(2*Math.PI*gr.age/gr.len);
+        const ip=gr.pos|0, frac=gr.pos-ip;
+        const a=this.buf[ip%this.bufLen], b=this.buf[(ip+1)%this.bufLen];
+        const s=(a+(b-a)*frac)*w; sL+=s*gr.gL; sR+=s*gr.gR;
+        gr.pos+=gr.rate; if(gr.pos>=this.bufLen) gr.pos-=this.bufLen;
+        if(++gr.age>=gr.len) this.grains.splice(gi,1);
       }
-      outL[i] = sL*wet; outR[i] = sR*wet;
+      outL[i]=sL*wet; outR[i]=sR*wet;
     }
     return true;
   }
@@ -177,121 +175,173 @@ class Granular extends AudioWorkletProcessor {
 registerProcessor('granular', Granular);
 `;
 
-/* ---------- 共有ステート ---------- */
+/* ---------- ステート ---------- */
 const S = {
   running:false,
-  rms:0, rmsSmooth:0, onset:0,
-  alpha:0, beta:0, gamma:0, aS:0, bS:0, gS:0, shake:0,
-  tempo:88, grainMix:0.70, reverbMix:0.65, delayMix:0.45, synthMix:0.35,
-  scaleRoot:0, step:0, keyName:'—', sceneId:'dream'
+  rms:0, rmsPeak:0.02, rmsNorm:0, onset:0,
+  alpha:0, beta:45, gamma:0, aS:0, bS:0, gS:0, energy:0.5, shake:0,
+  tempo:172, swing:0, tail:0.7, drumMix:0.85, grainMix:0.50, reverbMix:0.58, delayMix:0.42, synthMix:0.42, micGainVal:1.8,
+  scaleRoot:0, step:0, bar:0, keyName:'—', groove:'dnb',
+  fillUntil:0, kickFlash:0, varSeed:Math.random(), lastDeg:0, progIdx:0,
+  gotOrientation:false, dragMode:false, dragging:false, curDeviceId:null
 };
 
-/* シーン定義（グレインのピッチ比 / リバーブ長 / 雰囲気） */
-const SCENES = {
-  dream:{ ratios:[1, 1.5, 2, 2], rev:5.0, decay:3.2, grainMs:160, tone:7800 },
-  haunt:{ ratios:[0.5, 0.667, 1, 1.498], rev:6.5, decay:2.4, grainMs:230, tone:3200 },
-  choir:{ ratios:[1, 2, 3, 1.5], rev:4.2, decay:3.8, grainMs:110, tone:9500 }
+const GROOVES = {
+  ambient:{label:'Ambient', tempo:84,  swing:0,    drums:false, scene:'dream', tail:1.9},
+  house:  {label:'House',   tempo:124, swing:0.08, drums:true,  scene:'dream', tail:0.9,
+           kick:[0,4,8,12], snare:[4,12], ghost:[], hatC:[2,6,10,14], hatO:[14],
+           bass:[0,3,6,8,11,14], sub:'tri', subDur:0.22},
+  twostep:{label:'2-Step',  tempo:136, swing:0.34, drums:true,  scene:'choir', tail:0.85,
+           kick:[0,6,10], snare:[4,12], ghost:[14], hatC:[2,3,7,9,11,15], hatO:[6],
+           bass:[0,6,10,13], sub:'sine', subDur:0.30},
+  dnb:    {label:'DnB',     tempo:172, swing:0,    drums:true,  scene:'haunt', tail:0.7,
+           kick:[0,10], snare:[4,12], ghost:[7,15], hatC:[2,6,9,11,14], hatO:[8],
+           bass:[0,8], sub:'reese', subDur:0.45}
 };
+const SCENES = {
+  dream:{ ratios:[1,1.5,2,2], rev:4.8, decay:3.2, tone:8200, grainMs:150 },
+  haunt:{ ratios:[0.5,0.667,1,1.498], rev:6.2, decay:2.5, tone:3400, grainMs:230 },
+  choir:{ ratios:[1,2,3,1.5], rev:4.2, decay:3.6, tone:9200, grainMs:110 }
+};
+const PROG=[0,8,3,10];          // i, bVI, bIII, bVII（マイナーの定番ループ）
 
 /* ---------- オーディオグラフ ---------- */
-let ctx, comp, limiter, master, dryGain, reverb, revLP, reverbSend, synthBus;
+let ctx, comp, limiter, master, mLPF, mHPF;
+let pumpGain, synthBus, padBus, padPan, padLFO, padLFODepth, drumGain, reverb, revLP, reverbSend;
 let grainNode, grainGain;
 let delayL, delayR, dfbL, dfbR, dlpL, dlpR, delaySend, delayOutL, delayOutR;
-let micStream, micSource, micAnalyser, micData, prevSpectrum;
+let micStream, micSource, micGain, micComp, micAnalyser, micData, prevSpectrum;
+let padVoice=null;
 
 function buildGraph(){
   ctx = new (window.AudioContext || window.webkitAudioContext)();
 
   comp = ctx.createDynamicsCompressor();
   comp.threshold.value=-16; comp.ratio.value=4; comp.attack.value=0.005; comp.release.value=0.2;
+  mHPF = ctx.createBiquadFilter(); mHPF.type='highpass'; mHPF.frequency.value=20;  mHPF.Q.value=0.7;
+  mLPF = ctx.createBiquadFilter(); mLPF.type='lowpass';  mLPF.frequency.value=18000; mLPF.Q.value=0.7;
   limiter = ctx.createDynamicsCompressor();
   limiter.threshold.value=-2.5; limiter.ratio.value=20; limiter.attack.value=0.002; limiter.release.value=0.12;
   master = ctx.createGain(); master.gain.value=0.95;
-  comp.connect(limiter); limiter.connect(master); master.connect(ctx.destination);
+  comp.connect(mHPF); mHPF.connect(mLPF); mLPF.connect(limiter); limiter.connect(master); master.connect(ctx.destination);
 
-  dryGain = ctx.createGain(); dryGain.gain.value=0.9; dryGain.connect(comp);
-  synthBus = ctx.createGain(); synthBus.gain.value=S.synthMix; synthBus.connect(dryGain);
+  // pumpGain = サイドチェイン対象（音楽要素）。ドラムは通さない＝キックは抜ける
+  pumpGain = ctx.createGain(); pumpGain.gain.value=1.0; pumpGain.connect(comp);
+  drumGain = ctx.createGain(); drumGain.gain.value=S.drumMix; drumGain.connect(comp);
+  synthBus = ctx.createGain(); synthBus.gain.value=S.synthMix; synthBus.connect(pumpGain);
 
-  const sc = SCENES[S.sceneId];
+  // パッド・バス + オートパンLFO
+  padBus = ctx.createGain(); padBus.gain.value=0.9;
+  padPan = ctx.createStereoPanner();
+  padLFO = ctx.createOscillator(); padLFO.frequency.value=0.06; padLFO.type='sine';
+  padLFODepth = ctx.createGain(); padLFODepth.gain.value=0.7;
+  padLFO.connect(padLFODepth); padLFODepth.connect(padPan.pan); padLFO.start();
+  padBus.connect(padPan); padPan.connect(pumpGain);
+
+  // リバーブ（テイル長め）→ pumpへ（ポンプで呼吸する）
+  const sc = SCENES[GROOVES[S.groove].scene];
   reverb = ctx.createConvolver(); reverb.buffer = makeImpulse(sc.rev, sc.decay);
   revLP = ctx.createBiquadFilter(); revLP.type='lowpass'; revLP.frequency.value=sc.tone;
-  reverb.connect(revLP); revLP.connect(comp);
+  reverb.connect(revLP); revLP.connect(pumpGain);
   reverbSend = ctx.createGain(); reverbSend.gain.value=S.reverbMix; reverbSend.connect(reverb);
 
   buildDelay();
-}
 
+  // マイク入力チェーン（ゲイン→コンプ）。弱いBTマイクでも反応するように
+  micGain = ctx.createGain(); micGain.gain.value=S.micGainVal;
+  micComp = ctx.createDynamicsCompressor(); micComp.threshold.value=-34; micComp.ratio.value=3; micComp.attack.value=0.005; micComp.release.value=0.15;
+  micGain.connect(micComp);
+  micAnalyser = ctx.createAnalyser(); micAnalyser.fftSize=1024; micAnalyser.smoothingTimeConstant=0.6;
+  micData=new Uint8Array(micAnalyser.frequencyBinCount); prevSpectrum=new Float32Array(micAnalyser.frequencyBinCount);
+  micComp.connect(micAnalyser);
+}
 function buildDelay(){
-  // テンポ同期ピンポンディレイ（暗いフィードバックでダブ/夢想的に）
   delayL = ctx.createDelay(2.5); delayR = ctx.createDelay(2.5);
-  dfbL = ctx.createGain(); dfbR = ctx.createGain(); dfbL.gain.value=0.55; dfbR.gain.value=0.55;
+  dfbL = ctx.createGain(); dfbR = ctx.createGain(); dfbL.gain.value=0.52; dfbR.gain.value=0.52;
   dlpL = ctx.createBiquadFilter(); dlpL.type='lowpass'; dlpL.frequency.value=2600;
   dlpR = ctx.createBiquadFilter(); dlpR.type='lowpass'; dlpR.frequency.value=2600;
-  // クロスフィードバックで左右に跳ねる
   delayL.connect(dlpL); dlpL.connect(dfbL); dfbL.connect(delayR);
   delayR.connect(dlpR); dlpR.connect(dfbR); dfbR.connect(delayL);
-  delayOutL = ctx.createStereoPanner(); delayOutL.pan.value=-0.7;
-  delayOutR = ctx.createStereoPanner(); delayOutR.pan.value=0.7;
+  delayOutL = ctx.createStereoPanner(); delayOutL.pan.value=-0.75;
+  delayOutR = ctx.createStereoPanner(); delayOutR.pan.value=0.75;
   delayL.connect(delayOutL); delayR.connect(delayOutR);
   delaySend = ctx.createGain(); delaySend.gain.value=S.delayMix;
   delaySend.connect(delayL); delaySend.connect(delayR);
-  delayOutL.connect(comp); delayOutR.connect(comp);
-  delayOutL.connect(reverbSend); delayOutR.connect(reverbSend); // ディレイ→残響で霧化
+  delayOutL.connect(pumpGain); delayOutR.connect(pumpGain);
+  delayOutL.connect(reverbSend); delayOutR.connect(reverbSend);
   updateDelayTime();
 }
 function updateDelayTime(){
-  const beat = 60/S.tempo;
-  if(delayL) delayL.delayTime.setTargetAtTime(beat*0.75, ctx.currentTime, 0.05); // 付点8分
-  if(delayR) delayR.delayTime.setTargetAtTime(beat*0.5,  ctx.currentTime, 0.05); // 8分
+  if(!ctx) return; const beat=60/S.tempo;
+  delayL.delayTime.setTargetAtTime(beat*0.75, ctx.currentTime, 0.05);
+  delayR.delayTime.setTargetAtTime(beat*0.5,  ctx.currentTime, 0.05);
 }
-
 async function buildGranular(){
-  const blob = new Blob([GRANULAR_WORKLET], {type:'application/javascript'});
-  const url = URL.createObjectURL(blob);
-  await ctx.audioWorklet.addModule(url);
-  URL.revokeObjectURL(url);
-  grainNode = new AudioWorkletNode(ctx, 'granular', {
-    numberOfInputs:1, numberOfOutputs:1, outputChannelCount:[2]
-  });
-  grainGain = ctx.createGain(); grainGain.gain.value=S.grainMix;
+  const blob=new Blob([GRANULAR_WORKLET],{type:'application/javascript'});
+  const url=URL.createObjectURL(blob);
+  await ctx.audioWorklet.addModule(url); URL.revokeObjectURL(url);
+  grainNode=new AudioWorkletNode(ctx,'granular',{numberOfInputs:1,numberOfOutputs:1,outputChannelCount:[2]});
+  grainGain=ctx.createGain(); grainGain.gain.value=S.grainMix;
   grainNode.connect(grainGain);
-  // グレインは dry + delay + reverb の全てへ → ピッチアップした粒が残響でシマーに
-  grainGain.connect(dryGain);
-  grainGain.connect(delaySend);
-  grainGain.connect(reverbSend);
-  applyScene(S.sceneId, true);
+  grainGain.connect(pumpGain); grainGain.connect(delaySend); grainGain.connect(reverbSend);
+  if(micComp) micComp.connect(grainNode);
+  applyScene(GROOVES[S.groove].scene);
 }
-
-function makeImpulse(seconds, decay){
-  const rate=ctx.sampleRate, len=Math.floor(rate*seconds);
-  const buf=ctx.createBuffer(2,len,rate);
-  for(let ch=0;ch<2;ch++){
-    const d=buf.getChannelData(ch);
-    for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,decay);
-  }
+function makeImpulse(seconds,decay){
+  const rate=ctx.sampleRate, len=Math.floor(rate*seconds), buf=ctx.createBuffer(2,len,rate);
+  for(let ch=0;ch<2;ch++){ const d=buf.getChannelData(ch); for(let i=0;i<len;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/len,decay); }
   return buf;
 }
 
-/* ---------- マイク ---------- */
+/* ---------- マイク：デバイス選択 + 自動回避 + AGC ---------- */
+const BT_RE=/bluetooth|airpods|wireless|headset|ヘッドセット|buds|wf-|wh-|beats|sony|jabra|bose/i;
+async function acquireMic(deviceId){
+  if(micSource){ try{micSource.disconnect();}catch(e){} }
+  if(micStream){ micStream.getTracks().forEach(t=>t.stop()); }
+  const c={audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}};
+  if(deviceId) c.audio.deviceId={exact:deviceId};
+  micStream=await navigator.mediaDevices.getUserMedia(c);
+  micSource=ctx.createMediaStreamSource(micStream);
+  micSource.connect(micGain);
+  const tr=micStream.getAudioTracks()[0];
+  S.curDeviceId = tr.getSettings().deviceId || deviceId || null;
+  return tr;
+}
 async function initMic(){
   try{
-    micStream = await navigator.mediaDevices.getUserMedia({
-      audio:{echoCancellation:false, noiseSuppression:false, autoGainControl:false}
-    });
-    micSource = ctx.createMediaStreamSource(micStream);
-    micAnalyser = ctx.createAnalyser(); micAnalyser.fftSize=1024; micAnalyser.smoothingTimeConstant=0.6;
-    micData = new Uint8Array(micAnalyser.frequencyBinCount);
-    prevSpectrum = new Float32Array(micAnalyser.frequencyBinCount);
-    micSource.connect(micAnalyser);
-    micSource.connect(grainNode);   // ← マイクをグラニュラーへ
+    const tr=await acquireMic(null);
+    await populateDevices();
+    // 既定がBluetoothっぽければ内蔵マイクへ自動回避
+    if(BT_RE.test(tr.label||'')){
+      const devs=await navigator.mediaDevices.enumerateDevices();
+      const builtin=devs.find(d=>d.kind==='audioinput' && d.deviceId!=='default' && !BT_RE.test(d.label));
+      if(builtin){ await acquireMic(builtin.deviceId); await populateDevices(); }
+    }
     return true;
-  }catch(e){ console.warn('mic denied', e); return false; }
+  }catch(e){ console.warn('mic denied',e); return false; }
+}
+async function populateDevices(){
+  try{
+    const devs=await navigator.mediaDevices.enumerateDevices();
+    const ins=devs.filter(d=>d.kind==='audioinput');
+    const sel=document.getElementById('micDev'); sel.innerHTML='';
+    ins.forEach((d,i)=>{
+      const o=document.createElement('option');
+      o.value=d.deviceId; o.textContent=(d.label||('マイク '+(i+1)))+(BT_RE.test(d.label)?' ⚠BT':'');
+      if(d.deviceId===S.curDeviceId) o.selected=true;
+      sel.appendChild(o);
+    });
+  }catch(e){}
 }
 function readMic(){
   if(!micAnalyser) return;
   micAnalyser.getByteFrequencyData(micData);
   let sum=0; for(let i=0;i<micData.length;i++){ const v=micData[i]/255; sum+=v*v; }
-  S.rms=Math.sqrt(sum/micData.length); S.rmsSmooth+=(S.rms-S.rmsSmooth)*0.2;
+  S.rms=Math.sqrt(sum/micData.length);
+  // 自動正規化(AGC)：環境・マイク経路に依らず反応するように
+  S.rmsPeak=Math.max(S.rms, S.rmsPeak*0.9994);
+  const norm=S.rms/Math.max(S.rmsPeak*0.55, 0.012);
+  S.rmsNorm += (clamp(norm,0,1.4)-S.rmsNorm)*0.25;
   let flux=0; for(let i=0;i<micData.length;i++){ const v=micData[i]/255, df=v-prevSpectrum[i]; if(df>0) flux+=df; prevSpectrum[i]=v; }
   S.onset=flux;
 }
@@ -299,90 +349,198 @@ function readMic(){
 /* ---------- センサー ---------- */
 function attachSensors(){
   window.addEventListener('deviceorientation', e=>{
-    if(e.alpha!=null) S.alpha=e.alpha;
-    if(e.beta!=null)  S.beta=e.beta;
-    if(e.gamma!=null) S.gamma=e.gamma;
+    if(e.alpha!=null||e.beta!=null||e.gamma!=null) S.gotOrientation=true;
+    if(e.alpha!=null) S.alpha=e.alpha; if(e.beta!=null) S.beta=e.beta; if(e.gamma!=null) S.gamma=e.gamma;
   }, true);
   window.addEventListener('devicemotion', e=>{
     const a=e.accelerationIncludingGravity||e.acceleration;
-    if(a){ const mag=Math.hypot(a.x||0,a.y||0,a.z||0); S.shake=Math.max(S.shake, Math.max(0,mag-12)); }
+    if(a){ const mag=Math.hypot(a.x||0,a.y||0,a.z||0); S.shake=Math.max(S.shake,Math.max(0,mag-12)); }
   }, true);
 }
 function readSensors(){
-  S.aS += ((S.alpha/360)-S.aS)*0.05;
-  S.bS += (clamp(S.beta/60,-1,1)-S.bS)*0.08;
-  S.gS += (clamp(S.gamma/45,-1,1)-S.gS)*0.08;
-  S.shake *= 0.9;
-  // センサー → グラニュラー・パラメータ（傾き=粒の密度/長さ/拡散）
+  S.aS += ((S.alpha/360)-S.aS)*0.06;
+  const bN=clamp((S.beta-45)/45,-1,1); S.bS += (bN-S.bS)*0.16; S.energy=(S.bS+1)/2;
+  const gN=clamp(S.gamma/45,-1,1);     S.gS += (gN-S.gS)*0.16;
+  if(S.shake>4 && S.fillUntil < ctx.currentTime){ S.fillUntil = ctx.currentTime + (60/S.tempo)*1.5; }
+  S.shake*=0.9;
+  applyMotionAudio();
   if(grainNode){
-    const density = clamp(0.25 + S.rmsSmooth*1.4 + (S.bS+1)/2*0.3, 0, 1);
-    const spread  = clamp((S.gS+1)/2*0.7 + 0.2, 0, 1);
-    const gms     = SCENES[S.sceneId].grainMs * (0.6 + (S.bS+1)/2*0.9);
-    grainNode.parameters.get('density').setTargetAtTime(density, ctx.currentTime, 0.08);
-    grainNode.parameters.get('spread').setTargetAtTime(spread, ctx.currentTime, 0.08);
-    grainNode.parameters.get('grainMs').setTargetAtTime(gms, ctx.currentTime, 0.1);
+    const density=clamp(0.25+S.rmsNorm*0.9+S.energy*0.3,0,1);
+    const spread=clamp((S.gS+1)/2*0.7+0.2,0,1);
+    const gms=SCENES[GROOVES[S.groove].scene].grainMs*(0.6+S.energy*0.9);
+    grainNode.parameters.get('density').setTargetAtTime(density,ctx.currentTime,0.08);
+    grainNode.parameters.get('spread').setTargetAtTime(spread,ctx.currentTime,0.08);
+    grainNode.parameters.get('grainMs').setTargetAtTime(gms,ctx.currentTime,0.1);
   }
 }
+function applyMotionAudio(){
+  if(!mLPF) return;
+  const g=S.gS; let lpf=18000, hpf=20, lq=0.7, hq=0.7;
+  if(g<-0.02){ const t=-g; lpf=18000*Math.pow(320/18000,t); lq=0.7+t*7; }
+  else if(g>0.02){ const t=g; hpf=20*Math.pow(1600/20,t); hq=0.7+t*2.5; }
+  mLPF.frequency.setTargetAtTime(lpf,ctx.currentTime,0.03); mLPF.Q.setTargetAtTime(lq,ctx.currentTime,0.05);
+  mHPF.frequency.setTargetAtTime(hpf,ctx.currentTime,0.03); mHPF.Q.setTargetAtTime(hq,ctx.currentTime,0.05);
+}
 
-/* ---------- シーン適用 ---------- */
-function applyScene(id, silent){
-  S.sceneId=id;
-  const sc=SCENES[id];
+/* ---------- グルーヴ / シーン ---------- */
+function applyGroove(id){
+  S.groove=id; const gr=GROOVES[id];
+  S.tempo=gr.tempo; S.swing=gr.swing; S.tail=gr.tail;
+  const ts=document.getElementById('tempo'); if(ts){ ts.value=gr.tempo; document.getElementById('lab-tempo').textContent=gr.tempo; }
+  document.querySelectorAll('.pill').forEach(p=>p.classList.toggle('active', p.dataset.groove===id));
+  if(ctx){ applyScene(gr.scene); updateDelayTime(); }
+}
+function applyScene(sceneId){
+  const sc=SCENES[sceneId];
   if(grainNode) grainNode.port.postMessage({ratios:sc.ratios});
-  if(reverb) reverb.buffer = makeImpulse(sc.rev, sc.decay);
-  if(revLP) revLP.frequency.setTargetAtTime(sc.tone, ctx.currentTime, 0.2);
-  if(!silent){
-    document.querySelectorAll('.pill').forEach(p=>p.classList.toggle('active', p.dataset.scene===id));
-  }
+  if(reverb) reverb.buffer=makeImpulse(sc.rev,sc.decay);
+  if(revLP) revLP.frequency.setTargetAtTime(sc.tone,ctx.currentTime,0.2);
 }
 
-/* ---------- 生成エンジン（シンセの和声ベッド） ---------- */
+/* ---------- スケジューラ ---------- */
 const PENTA=[0,3,5,7,10];
 const KEYS=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 let nextNoteTime=0, timerID=null;
 const LOOKAHEAD=25, AHEAD=0.12;
 function freq(s){ return 440*Math.pow(2,(s-69)/12); }
-function scheduler(){
-  while(nextNoteTime < ctx.currentTime+AHEAD){ scheduleStep(S.step, nextNoteTime); advance(); }
-  timerID=setTimeout(scheduler, LOOKAHEAD);
+function scheduler(){ while(nextNoteTime < ctx.currentTime+AHEAD){ scheduleStep(S.step, nextNoteTime); advance(); } timerID=setTimeout(scheduler, LOOKAHEAD); }
+function advance(){
+  const s16=0.25*(60/S.tempo);
+  S.step=(S.step+1)%16;
+  if(S.step===0){ S.bar++; onBar(nextNoteTime); }
+  nextNoteTime += (S.step%2===1)?s16*(1+S.swing):s16*(1-S.swing);
 }
-function advance(){ nextNoteTime += 0.25*(60/S.tempo); S.step=(S.step+1)%16; }
+function onBar(time){
+  S.varSeed=Math.random();
+  if(S.bar%2===0) changeChord(time);     // 2小節ごとにコード進行
+}
+
+/* ---------- 旋律：マルコフ的な歩進（ランダムだが音楽的） ---------- */
+function nextDegree(){
+  const r=Math.random(); let stepN;
+  if(r<0.58) stepN=[-1,0,1][(Math.random()*3)|0];
+  else if(r<0.85) stepN=[-2,2][(Math.random()*2)|0];
+  else stepN=[-3,3,4][(Math.random()*3)|0];
+  S.lastDeg=((S.lastDeg+stepN)%PENTA.length+PENTA.length)%PENTA.length;
+  return S.lastDeg;
+}
+function bassNote(){ const deg=Math.random()<0.22?7:(Math.random()<0.18?12:0); return freq(36+S.scaleRoot+deg); }
+
 function scheduleStep(step, time){
   S.scaleRoot=Math.floor(S.aS*12); S.keyName=KEYS[S.scaleRoot%12]+'m';
-  const beatW=(step%4===0)?0.3:(step%2===0?0.1:0.015);
-  const p = S.synthMix*0.7 + S.rmsSmooth*0.8 + beatW;
-  if(Math.random()<p && S.synthMix>0.02){
-    const deg=PENTA[(Math.random()*PENTA.length)|0];
-    const oct=48 + (S.bS>0.2?12:0) + (S.bS<-0.3?-12:0) + (Math.random()<0.3?12:0);
-    playVoice(time, freq(oct+S.scaleRoot+deg), 0.2+Math.min(0.4,S.rmsSmooth));
+  const s16=0.25*(60/S.tempo), half=s16*0.5, e=S.energy, gr=GROOVES[S.groove];
+  const hum=()=> (Math.random()-0.5)*0.012;             // ヒューマナイズ(±12ms)
+  const vh=(v)=> v*(0.82+Math.random()*0.36);           // ベロシティ揺らぎ
+
+  if(gr.drums){
+    const broken = e<0.20;
+    if(!broken){
+      if(gr.kick.includes(step)){ playKick(time, vh(0.95)); duck(time); S.kickFlash=1; spawnRipple(2.2); }
+      if(gr.snare.includes(step)){ playSnare(time, vh(0.85)); spawnRipple(1.5); }
+      if(gr.bass.includes(step)) playSub(time, bassNote(), 0.85, gr.subDur, gr.sub);
+      if(gr.ghost && gr.ghost.includes(step)) playSnare(time, vh(0.26));
+      // 小節ごとの変奏：たまにゴーストキック/追加スネア
+      if(S.varSeed<0.3 && step===6 && Math.random()<0.4){ playKick(time, 0.5); duck(time); }
+      if(S.varSeed>0.7 && (step===11||step===14) && Math.random()<0.45) playSnare(time, 0.3);
+    }
+    if(gr.hatC.includes(step) && Math.random()<0.4+e*0.55) playHat(time+hum(), vh(0.22+e*0.25), false);
+    if(gr.hatO && gr.hatO.includes(step)) playHat(time, 0.3, true);
+    if(e>0.8 && Math.random()<0.5) playHat(time+half+hum(), 0.16, false);
   }
-  if(S.shake>3 && step%2===0){ playPerc(time, S.shake); S.shake=0; spawnRipple(1.8); }
+
+  if(time < S.fillUntil){
+    const fv=clamp(0.3+(1-(S.fillUntil-time)/((60/S.tempo)*1.5))*0.55,0.3,0.9);
+    playSnare(time, fv); playSnare(time+half, fv*0.85); spawnRipple(fv*1.5);
+  }
+
+  // 旋律（マルコフ）。ドラム時は控えめ、ハイエナジーで音数増
+  const lead = (gr.drums?0.14:0.42)*(0.6+S.synthMix) + S.rmsNorm*0.4 + (step%4===0?0.12:0) + (e>0.7?0.12:0);
+  if(Math.random()<lead){
+    const deg=PENTA[nextDegree()];
+    const oct=48 + (e>0.6?12:0) + (Math.random()<0.25?12:0) + (Math.random()<0.12?-12:0);
+    playVoice(time+hum(), freq(oct+S.scaleRoot+deg), vh(0.2+Math.min(0.32,S.rmsNorm)));
+  }
 }
-function playVoice(time, f, vel){
+
+/* ---------- サイドチェイン ---------- */
+function duck(time){
+  if(!pumpGain) return; const p=pumpGain.gain;
+  p.cancelScheduledValues(time); p.setValueAtTime(1.0, time);
+  p.linearRampToValueAtTime(0.34, time+0.012);
+  p.setTargetAtTime(1.0, time+0.014, (60/S.tempo)*0.16);
+}
+
+/* ---------- パッド（持続コード）---------- */
+function chordFreqs(){
+  const root=48 + S.scaleRoot + PROG[S.progIdx];   // C3付近
+  return [root, root+3, root+7, root+10].map(freq); // m7
+}
+function changeChord(time){
+  S.progIdx=(S.progIdx+1)%PROG.length;
+  const semis=chordFreqs(), rel=2.6;
+  if(padVoice){ const old=padVoice; old.gain.gain.cancelScheduledValues(time); old.gain.gain.setTargetAtTime(0.0001,time,0.9); old.oscs.forEach(o=>{try{o.stop(time+rel);}catch(e){}}); }
+  const gain=ctx.createGain(); gain.gain.value=0;
+  const lpf=ctx.createBiquadFilter(); lpf.type='lowpass'; lpf.frequency.value=1500; lpf.Q.value=0.4;
+  const oscs=[];
+  semis.forEach((f,i)=>{ [-7,7].forEach(det=>{ const o=ctx.createOscillator(); o.type=(i%2?'triangle':'sawtooth'); o.frequency.value=f; o.detune.value=det; o.connect(lpf); o.start(time); oscs.push(o); }); });
+  lpf.connect(gain); gain.connect(padBus); gain.connect(reverbSend);
+  gain.gain.setValueAtTime(0,time); gain.gain.linearRampToValueAtTime(0.14, time+0.9);
+  padVoice={gain,oscs};
+}
+
+/* ---------- ドラム ---------- */
+function playKick(time,vel){
+  const o=ctx.createOscillator(); o.type='sine'; const g=ctx.createGain();
+  o.frequency.setValueAtTime(155,time); o.frequency.exponentialRampToValueAtTime(45,time+0.09);
+  g.gain.setValueAtTime(vel,time); g.gain.exponentialRampToValueAtTime(0.001,time+0.3);
+  o.connect(g); g.connect(drumGain); o.start(time); o.stop(time+0.32);
+}
+function playSnare(time,vel){
+  const dur=0.18, nb=ctx.createBuffer(1,Math.floor(ctx.sampleRate*dur),ctx.sampleRate), d=nb.getChannelData(0);
+  for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,1.5);
+  const ns=ctx.createBufferSource(); ns.buffer=nb;
+  const hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=1400;
+  const ng=ctx.createGain(); ng.gain.setValueAtTime(vel*0.7,time); ng.gain.exponentialRampToValueAtTime(0.001,time+0.15);
+  const pan=ctx.createStereoPanner(); pan.pan.value=(Math.random()*0.5-0.25);
+  ns.connect(hp); hp.connect(ng); ng.connect(pan); pan.connect(drumGain); ng.connect(reverbSend); ns.start(time);
+  const o=ctx.createOscillator(); o.type='triangle'; o.frequency.setValueAtTime(190,time); o.frequency.exponentialRampToValueAtTime(120,time+0.1);
+  const og=ctx.createGain(); og.gain.setValueAtTime(vel*0.5,time); og.gain.exponentialRampToValueAtTime(0.001,time+0.1);
+  o.connect(og); og.connect(drumGain); o.start(time); o.stop(time+0.12);
+}
+function playHat(time,vel,open){
+  const dur=open?0.26:0.05, nb=ctx.createBuffer(1,Math.floor(ctx.sampleRate*dur),ctx.sampleRate), d=nb.getChannelData(0);
+  for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1);
+  const ns=ctx.createBufferSource(); ns.buffer=nb;
+  const hp=ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=7500;
+  const g=ctx.createGain(); g.gain.setValueAtTime(vel*0.4,time); g.gain.exponentialRampToValueAtTime(0.0008,time+dur);
+  const pan=ctx.createStereoPanner(); pan.pan.value=(Math.random()*1.2-0.6);  // ハットを左右に散らす
+  ns.connect(hp); hp.connect(g); g.connect(pan); pan.connect(drumGain); ns.start(time);
+}
+function playSub(time,f,vel,dur,type){
+  const lpf=ctx.createBiquadFilter(); lpf.type='lowpass'; lpf.frequency.value=(type==='reese'?520:1300); lpf.Q.value=2;
+  const g=ctx.createGain(); g.gain.value=0; let oscs=[];
+  if(type==='reese'){ const a=ctx.createOscillator(); a.type='sawtooth'; a.frequency.value=f; a.detune.value=-11; const b=ctx.createOscillator(); b.type='sawtooth'; b.frequency.value=f; b.detune.value=+11; oscs=[a,b]; }
+  else{ const a=ctx.createOscillator(); a.type=(type==='tri'?'triangle':'sine'); a.frequency.value=f; oscs=[a]; }
+  oscs.forEach(o=>o.connect(lpf)); lpf.connect(g); g.connect(drumGain);
+  g.gain.setValueAtTime(0,time); g.gain.linearRampToValueAtTime(vel,time+0.012); g.gain.exponentialRampToValueAtTime(0.0008,time+dur);
+  oscs.forEach(o=>{ o.start(time); o.stop(time+dur+0.03); });
+}
+
+/* ---------- 旋律シンセ（広いランダムパン + 余韻可変） ---------- */
+function playVoice(time,f,vel){
   const o1=ctx.createOscillator(); o1.type='sawtooth'; o1.frequency.value=f;
   const o2=ctx.createOscillator(); o2.type='triangle'; o2.frequency.value=f; o2.detune.value=+7;
-  const lpf=ctx.createBiquadFilter(); lpf.type='lowpass';
-  lpf.frequency.setValueAtTime(600+Math.pow((S.bS+1)/2,1.5)*5200, time); lpf.Q.value=5;
+  const lpf=ctx.createBiquadFilter(); lpf.type='lowpass'; lpf.frequency.setValueAtTime(600+S.energy*5200,time); lpf.Q.value=5;
   const amp=ctx.createGain(); amp.gain.value=0;
-  const pan=ctx.createStereoPanner(); pan.pan.value=clamp(S.gS,-1,1);
+  const pan=ctx.createStereoPanner(); pan.pan.value=clamp(S.gS*0.4+(Math.random()*1.6-0.8),-1,1);
   o1.connect(lpf); o2.connect(lpf); lpf.connect(amp); amp.connect(pan);
-  pan.connect(synthBus); pan.connect(reverbSend);
-  const a=0.008,d=0.2,rel=0.6;
-  amp.gain.setValueAtTime(0,time);
-  amp.gain.linearRampToValueAtTime(vel,time+a);
-  amp.gain.exponentialRampToValueAtTime(Math.max(0.0008,vel*0.18),time+a+d);
+  pan.connect(synthBus); pan.connect(reverbSend); pan.connect(delaySend);
+  const a=0.008, d=0.2, rel=0.55*S.tail;               // テイルをグルーヴ別に
+  amp.gain.setValueAtTime(0,time); amp.gain.linearRampToValueAtTime(vel,time+a);
+  amp.gain.exponentialRampToValueAtTime(Math.max(0.0008,vel*0.2),time+a+d);
   amp.gain.exponentialRampToValueAtTime(0.0008,time+a+d+rel);
-  o1.start(time); o2.start(time); o1.stop(time+a+d+rel+0.05); o2.stop(time+a+d+rel+0.05);
-  spawnRipple(vel*1.3, f);
-}
-function playPerc(time, intensity){
-  const len=0.18, buf=ctx.createBuffer(1, ctx.sampleRate*len, ctx.sampleRate), d=buf.getChannelData(0);
-  for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/d.length,3);
-  const src=ctx.createBufferSource(); src.buffer=buf;
-  const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=1800; bp.Q.value=0.8;
-  const g=ctx.createGain(); g.gain.value=Math.min(0.55,0.16+intensity*0.05);
-  src.connect(bp); bp.connect(g); g.connect(dryGain); g.connect(reverbSend);
-  src.start(time);
+  o1.start(time); o2.start(time); o1.stop(time+a+d+rel+0.06); o2.stop(time+a+d+rel+0.06);
+  spawnRipple(vel*1.1,f);
 }
 
 /* ---------- ビジュアル ---------- */
@@ -390,38 +548,34 @@ const cv=document.getElementById('scene'), g=cv.getContext('2d');
 let W,H,DPR; const ripples=[];
 function resize(){ DPR=Math.min(2,window.devicePixelRatio||1); W=cv.width=(innerWidth*DPR)|0; H=cv.height=(innerHeight*DPR)|0; cv.style.width=innerWidth+'px'; cv.style.height=innerHeight+'px'; }
 addEventListener('resize',resize); resize();
-function spawnRipple(strength, f){ if(ripples.length>60) return; ripples.push({r:0,a:Math.min(1,strength*0.55+0.15),hue:(S.aS*360+(f?Math.log2(f)*30:0))%360,speed:2+strength*2.5}); }
+function spawnRipple(strength,f){ if(ripples.length>70) return; ripples.push({r:0,a:Math.min(1,strength*0.5+0.15),hue:(S.aS*360+(f?Math.log2(f)*30:0))%360,speed:2+strength*2.6}); }
 let hueBase=0;
 function draw(){
   requestAnimationFrame(draw);
-  hueBase += 0.1 + S.rmsSmooth*0.6;
+  S.kickFlash*=0.86; hueBase += 0.1 + S.rmsNorm*0.5 + S.energy*0.3;
   const hue=(S.aS*300+hueBase)%360;
   const bg=g.createRadialGradient(W/2,H*0.42,0,W/2,H*0.42,Math.max(W,H)*0.75);
-  bg.addColorStop(0,`hsla(${hue},45%,10%,1)`); bg.addColorStop(1,'#0B0A1F');
+  bg.addColorStop(0,`hsla(${hue},${40+S.energy*25}%,${9+S.kickFlash*8}%,1)`); bg.addColorStop(1,'#0B0A1F');
   g.fillStyle=bg; g.fillRect(0,0,W,H);
-  const cx=W/2+S.gS*W*0.16, cy=H*0.44+S.bS*H*0.10;
-  const base=Math.min(W,H)*(0.16+S.rmsSmooth*0.22), t=performance.now()/1000;
+  const cx=W/2+S.gS*W*0.17, cy=H*0.44-S.bS*H*0.10;
+  const base=Math.min(W,H)*(0.15+S.rmsNorm*0.16+S.kickFlash*0.06+S.energy*0.03), t=performance.now()/1000;
   g.globalCompositeOperation='lighter';
   for(let ring=0;ring<4;ring++){
-    const rr=base*(1+ring*0.34), h=(hue+ring*28)%360;
-    g.beginPath();
+    const rr=base*(1+ring*0.34), h=(hue+ring*28)%360; g.beginPath();
     for(let i=0;i<=72;i++){
       const ang=(i/72)*Math.PI*2;
-      const wob=Math.sin(ang*3+t*1.5+ring)*rr*0.10*(0.4+S.rmsSmooth)+Math.sin(ang*5-t*1.1)*rr*0.05;
+      const wob=Math.sin(ang*3+t*1.5+ring)*rr*0.10*(0.4+S.rmsNorm+S.energy*0.3)+Math.sin(ang*5-t*1.1)*rr*0.05;
       const r=rr+wob, x=cx+Math.cos(ang+S.aS*Math.PI*2)*r, y=cy+Math.sin(ang+S.aS*Math.PI*2)*r;
       i===0?g.moveTo(x,y):g.lineTo(x,y);
     }
-    g.closePath();
-    g.strokeStyle=`hsla(${h},85%,${62-ring*6}%,${0.5-ring*0.09})`;
-    g.lineWidth=DPR*(2.2-ring*0.35); g.stroke();
+    g.closePath(); g.strokeStyle=`hsla(${h},85%,${62-ring*6}%,${0.5-ring*0.09})`; g.lineWidth=DPR*(2.2-ring*0.35); g.stroke();
   }
-  const core=g.createRadialGradient(cx,cy,0,cx,cy,base*0.9);
-  core.addColorStop(0,`hsla(${hue},90%,75%,${0.35+S.rmsSmooth*0.4})`); core.addColorStop(1,`hsla(${hue},90%,55%,0)`);
-  g.fillStyle=core; g.beginPath(); g.arc(cx,cy,base*0.9,0,Math.PI*2); g.fill();
+  const core=g.createRadialGradient(cx,cy,0,cx,cy,base*0.95);
+  core.addColorStop(0,`hsla(${hue},90%,75%,${0.32+S.rmsNorm*0.4+S.kickFlash*0.4})`); core.addColorStop(1,`hsla(${hue},90%,55%,0)`);
+  g.fillStyle=core; g.beginPath(); g.arc(cx,cy,base*0.95,0,Math.PI*2); g.fill();
   for(let i=ripples.length-1;i>=0;i--){
     const rp=ripples[i]; rp.r+=rp.speed*DPR*2; rp.a*=0.965;
-    g.beginPath(); g.arc(cx,cy,base*0.5+rp.r,0,Math.PI*2);
-    g.strokeStyle=`hsla(${rp.hue},90%,68%,${rp.a})`; g.lineWidth=DPR*1.4; g.stroke();
+    g.beginPath(); g.arc(cx,cy,base*0.5+rp.r,0,Math.PI*2); g.strokeStyle=`hsla(${rp.hue},90%,68%,${rp.a})`; g.lineWidth=DPR*1.4; g.stroke();
     if(rp.a<0.02) ripples.splice(i,1);
   }
   g.globalCompositeOperation='source-over';
@@ -431,10 +585,10 @@ draw();
 /* ---------- HUD ---------- */
 const els={rms:document.getElementById('m-rms'),vrms:document.getElementById('v-rms'),alpha:document.getElementById('m-alpha'),valpha:document.getElementById('v-alpha'),beta:document.getElementById('m-beta'),vbeta:document.getElementById('v-beta'),gamma:document.getElementById('m-gamma'),vgamma:document.getElementById('v-gamma'),key:document.getElementById('keyBadge')};
 function updateHUD(){
-  els.rms.style.width=Math.min(100,S.rmsSmooth*180)+'%'; els.vrms.textContent=S.rmsSmooth.toFixed(2);
+  els.rms.style.width=Math.min(100,S.rmsNorm*100)+'%'; els.vrms.textContent=S.rmsNorm.toFixed(2);
   els.alpha.style.width=(S.aS*100)+'%'; els.valpha.textContent=Math.round(S.alpha)+'°';
-  els.beta.style.width=((S.bS+1)/2*100)+'%'; els.vbeta.textContent=Math.round(S.beta)+'°';
-  els.gamma.style.width=((S.gS+1)/2*100)+'%'; els.vgamma.textContent=Math.round(S.gamma)+'°';
+  els.beta.style.width=(S.energy*100)+'%'; els.vbeta.textContent=Math.round(S.energy*100)+'%';
+  els.gamma.style.width=((S.gS+1)/2*100)+'%'; els.vgamma.textContent=(S.gS<-0.05?'LP':S.gS>0.05?'HP':'––');
   els.key.textContent='KEY · '+S.keyName;
 }
 function loop(){ if(S.running){ readMic(); readSensors(); updateHUD(); } requestAnimationFrame(loop); }
@@ -442,12 +596,26 @@ loop();
 
 /* ---------- コントロール ---------- */
 const bind=(id,fn,labId,fmt)=>{const el=document.getElementById(id),lab=document.getElementById(labId);el.addEventListener('input',()=>{const v=+el.value;fn(v);if(lab)lab.textContent=fmt(v);});};
-bind('tempo',v=>{S.tempo=v;updateDelayTime();},'lab-tempo',v=>v);
-bind('grain',v=>{S.grainMix=v/100;if(grainGain)grainGain.gain.setTargetAtTime(S.grainMix,ctx.currentTime,0.1);},'lab-grain',v=>(v/100).toFixed(2));
+bind('tempo', v=>{S.tempo=v;updateDelayTime();},'lab-tempo',v=>v);
+bind('drums', v=>{S.drumMix=v/100;if(drumGain)drumGain.gain.setTargetAtTime(S.drumMix,ctx.currentTime,0.1);},'lab-drums',v=>(v/100).toFixed(2));
+bind('grain', v=>{S.grainMix=v/100;if(grainGain)grainGain.gain.setTargetAtTime(S.grainMix,ctx.currentTime,0.1);},'lab-grain',v=>(v/100).toFixed(2));
 bind('reverb',v=>{S.reverbMix=v/100;if(reverbSend)reverbSend.gain.setTargetAtTime(S.reverbMix,ctx.currentTime,0.1);},'lab-reverb',v=>(v/100).toFixed(2));
-bind('delay',v=>{S.delayMix=v/100;if(delaySend)delaySend.gain.setTargetAtTime(S.delayMix,ctx.currentTime,0.1);},'lab-delay',v=>(v/100).toFixed(2));
-bind('synth',v=>{S.synthMix=v/100;if(synthBus)synthBus.gain.setTargetAtTime(S.synthMix,ctx.currentTime,0.1);},'lab-synth',v=>(v/100).toFixed(2));
-document.querySelectorAll('.pill').forEach(p=>p.addEventListener('click',()=>{ if(ctx) applyScene(p.dataset.scene); else { S.sceneId=p.dataset.scene; document.querySelectorAll('.pill').forEach(x=>x.classList.toggle('active',x===p)); } }));
+bind('delay', v=>{S.delayMix=v/100;if(delaySend)delaySend.gain.setTargetAtTime(S.delayMix,ctx.currentTime,0.1);},'lab-delay',v=>(v/100).toFixed(2));
+bind('sens',  v=>{S.micGainVal=v/100;if(micGain)micGain.gain.setTargetAtTime(S.micGainVal,ctx.currentTime,0.1);},'lab-sens',v=>(v/100).toFixed(1));
+document.querySelectorAll('.pill').forEach(p=>p.addEventListener('click',()=>applyGroove(p.dataset.groove)));
+document.getElementById('micDev').addEventListener('change', async (e)=>{ try{ await acquireMic(e.target.value); }catch(err){ console.warn(err); } });
+applyGroove('dnb');
+
+/* ---------- ポインタ・フォールバック ---------- */
+function enableDrag(){
+  if(S.dragMode) return; S.dragMode=true; document.getElementById('dragBadge').classList.add('on');
+  const set=(x,y)=>{ S.gamma=((x/innerWidth)*2-1)*45; S.beta=45-((y/innerHeight)*2-1)*45; };
+  const canvas=document.getElementById('scene'); canvas.style.pointerEvents='auto';
+  canvas.addEventListener('pointerdown',e=>{ S.dragging=true; set(e.clientX,e.clientY); });
+  window.addEventListener('pointermove',e=>{ if(S.dragging) set(e.clientX,e.clientY); });
+  window.addEventListener('pointerup',()=>{ S.dragging=false; });
+  setInterval(()=>{ if(S.dragMode&&S.running) S.alpha=(S.alpha+0.6)%360; },60);
+}
 
 /* ---------- 起動 / 停止 ---------- */
 const gate=document.getElementById('gate'), hud=document.getElementById('hud');
@@ -461,21 +629,21 @@ async function requestMotionPermission(){
 startBtn.addEventListener('click', async ()=>{
   startBtn.disabled=true; startBtn.textContent='起動中…';
   try{
-    buildGraph();
-    await ctx.resume();
-    await buildGranular();
-    await requestMotionPermission();
-    attachSensors();
+    buildGraph(); await ctx.resume(); await buildGranular();
+    await requestMotionPermission(); attachSensors();
+    applyGroove(S.groove); updateDelayTime();
     const ok=await initMic();
     if(!ok){ startBtn.textContent='マイク許可が必要です'; startBtn.disabled=false; return; }
-    S.running=true; nextNoteTime=ctx.currentTime+0.1; scheduler();
+    S.running=true; S.bar=0; S.step=0; nextNoteTime=ctx.currentTime+0.1;
+    changeChord(ctx.currentTime+0.1);
+    scheduler();
     gate.style.display='none'; hud.classList.add('on');
+    setTimeout(()=>{ if(!S.gotOrientation) enableDrag(); }, 1800);
   }catch(err){ console.error(err); startBtn.textContent='起動エラー（コンソール参照）'; startBtn.disabled=false; }
 });
 stopBtn.addEventListener('click', ()=>{
   S.running=false; if(timerID) clearTimeout(timerID);
-  if(ctx) ctx.suspend();
-  if(micStream) micStream.getTracks().forEach(t=>t.stop());
+  if(ctx) ctx.suspend(); if(micStream) micStream.getTracks().forEach(t=>t.stop());
   hud.classList.remove('on'); gate.style.display='flex';
   startBtn.disabled=false; startBtn.textContent='シーンをはじめる';
 });
